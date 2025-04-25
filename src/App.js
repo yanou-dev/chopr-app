@@ -1,12 +1,27 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { CssBaseline, Box } from '@mui/material';
-import { useTheme } from './contexts/ThemeContext';
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { CssBaseline, Box } from "@mui/material";
+import { useTheme } from "./contexts/ThemeContext";
 
-// Pages
-import HomePage from './pages/HomePage';
-import CreateProjectPage from './pages/CreateProjectPage';
-import ViewerPage from './pages/ViewerPage';
+import HomePage from "./pages/HomePage";
+import CreateProjectPage from "./pages/CreateProjectPage";
+import ViewerPage from "./pages/ViewerPage";
+
+const WindowResizer = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    window.electron.resizeWindow(null, null, location.pathname);
+  }, [location.pathname]);
+
+  return null;
+};
 
 function App() {
   const { theme } = useTheme();
@@ -15,32 +30,35 @@ function App() {
   return (
     <Router>
       <CssBaseline />
+      <WindowResizer />
       <Box
         sx={{
-          minHeight: '100vh',
-          bgcolor: 'background.default',
-          color: 'text.primary',
-          transition: theme.transitions.create(['background-color', 'color']),
+          minHeight: "100vh",
+          bgcolor: "background.default",
+          color: "text.primary",
+          transition: theme.transitions.create(["background-color", "color"]),
         }}
       >
         <Routes>
-          <Route 
-            path="/" 
-            element={<HomePage setCurrentProject={setCurrentProject} />} 
+          <Route
+            path="/"
+            element={<HomePage setCurrentProject={setCurrentProject} />}
           />
-          <Route 
-            path="/create" 
-            element={<CreateProjectPage setCurrentProject={setCurrentProject} />} 
+          <Route
+            path="/create"
+            element={
+              <CreateProjectPage setCurrentProject={setCurrentProject} />
+            }
           />
-          <Route 
-            path="/viewer" 
+          <Route
+            path="/viewer"
             element={
               currentProject ? (
                 <ViewerPage project={currentProject} />
               ) : (
                 <Navigate to="/" replace />
               )
-            } 
+            }
           />
         </Routes>
       </Box>

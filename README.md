@@ -1,4 +1,4 @@
-# LogViewer
+# Chopr
 
 A modern desktop application for visualizing logs from various sources with an intuitive and aesthetic interface.
 
@@ -26,8 +26,8 @@ A modern desktop application for visualizing logs from various sources with an i
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/logviewer.git
-   cd logviewer
+   git clone https://github.com/yourusername/chopr.git
+   cd chopr
    ```
 
 2. Install dependencies:
@@ -73,7 +73,7 @@ This application is built with:
 ### Project Structure
 
 ```
-logviewer/
+chopr/
 ├── main.js              # Electron main process
 ├── preload.js           # Secure bridge between renderer and main processes
 ├── public/              # Static assets

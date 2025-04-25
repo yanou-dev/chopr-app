@@ -1,680 +1,850 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Typography,
-  Paper,
-  Drawer,
-  AppBar,
-  Toolbar,
-  IconButton,
-  TextField,
   Chip,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
-  Checkbox,
-  FormControlLabel,
-  Button,
-  CircularProgress,
-  Tooltip,
+  FormControl,
+  IconButton,
+  InputLabel,
   Menu,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Alert,
-  Snackbar
-} from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
-import {
-  ArrowBack as ArrowBackIcon,
-  Search as SearchIcon,
-  Clear as ClearIcon,
-  PlayArrow as PlayArrowIcon,
-  Stop as StopIcon,
-  Refresh as RefreshIcon,
-  FilterList as FilterListIcon,
-  MoreVert as MoreVertIcon,
-  Download as DownloadIcon,
-  DarkMode as DarkModeIcon,
-  LightMode as LightModeIcon
-} from '@mui/icons-material';
-import { useTheme } from '../contexts/ThemeContext';
-
-// Utility function to parse logs based on format
-const parseLog = (log, parserType) => {
-  try {
-    if (parserType === 'json') {
-      return JSON.parse(log);
-    } else if (parserType === 'log4j') {
-      // Simple Log4j parser (can be improved for more complex formats)
-      const regex = /\[(INFO|WARN|ERROR|DEBUG)\]\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s+-\s+([^-]+)\s+-\s+(.*)/;
-      const match = log.match(regex);
-      
-      if (match) {
-        return {
-          level: match[1],
-          timestamp: match[2],
-          class: match[3].trim(),
-          message: match[4]
-        };
-      }
-      
-      return { message: log };
-    } else if (parserType === 'nodejs') {
-      // Simple Node.js console.log parser
-      const timestamp = new Date().toISOString();
-      return {
-        timestamp,
-        message: log
-      };
-    }
-    
-    // Default fallback
-    return { message: log };
-  } catch (error) {
-    console.warn('Error parsing log:', error);
-    return { message: log, _raw: log };
-  }
-};
-
-// Get log level color
-const getLevelColor = (level) => {
-  if (!level) return 'default';
-  
-  const levelLower = level.toLowerCase();
-  if (levelLower.includes('error')) return 'error';
-  if (levelLower.includes('warn')) return 'warning';
-  if (levelLower.includes('info')) return 'info';
-  if (levelLower.includes('debug')) return 'default';
-  
-  return 'default';
-};
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import HomeIcon from "@mui/icons-material/Home";
+import SettingsIcon from "@mui/icons-material/Settings";
+import DownloadIcon from "@mui/icons-material/Download";
+import SearchIcon from "@mui/icons-material/Search";
+import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
+import TitleBar from "../components/TitleBar";
+import LogParser from "../parsers/LogParser";
+import JSONParser from "../parsers/JSONParser";
 
 const ViewerPage = ({ project }) => {
   const navigate = useNavigate();
-  const { mode, toggleTheme } = useTheme();
+  const parser =
+    project.parser.type === "json"
+      ? new JSONParser()
+      : new LogParser(project.parser.type);
+
   const [logs, setLogs] = useState([]);
-  const [filteredLogs, setFilteredLogs] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [fields, setFields] = useState([]);
-  const [fieldFilters, setFieldFilters] = useState({});
-  const [isRunning, setIsRunning] = useState(false);
+  const [columns, setColumns] = useState(parser.getColumns());
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState("");
+  const [levelFilter, setLevelFilter] = useState("all");
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [commandId, setCommandId] = useState(null);
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [drawerWidth, setDrawerWidth] = useState(280);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-  const [menuAnchorEl, setMenuAnchorEl] = useState(null);
-  const [exportDialog, setExportDialog] = useState(false);
-  
-  // Unique ID for this log source
-  const logSourceId = useRef(`log-source-${Date.now()}`);
-  
-  // Reference to keep track of unsubscribe function
-  const unsubscribeRef = useRef(null);
-  
-  // Initialize and start log collection
+  const tableContainerRef = useRef(null);
+
+  parser.on("columnsChanged", (columns) => {
+    setColumns(columns);
+  });
+
+  const generateSearchSuggestions = (logs) => {
+    const suggestions = new Set();
+
+    columns.forEach((column) => {
+      if (!["message", "rawLog", "id"].includes(column.id)) {
+        suggestions.add(`${column.id}:`);
+      }
+    });
+
+    if (logs.length > 0) {
+      logs.forEach((log) => {
+        columns.forEach((column) => {
+          const value = log[column.id];
+          if (
+            value &&
+            typeof value === "string" &&
+            !["message", "rawLog", "id"].includes(column.id)
+          ) {
+            suggestions.add(`${column.id}:"${value}"`);
+          }
+        });
+      });
+    }
+
+    return Array.from(suggestions);
+  };
+
+  useEffect(() => {
+    setSearchSuggestions(generateSearchSuggestions(logs));
+  }, [logs]);
+
   useEffect(() => {
     if (!project) {
-      navigate('/');
+      navigate("/");
       return;
     }
-    
+
     startLogCollection();
-    
-    // Set up event listeners for command output
-    const unsubscribeOutput = window.electron.onCommandOutput((data) => {
-      if (data.id === logSourceId.current) {
-        handleLogData(data.data);
-      }
-    });
-    
-    const unsubscribeClosed = window.electron.onCommandClosed((data) => {
-      if (data.id === logSourceId.current) {
-        setIsRunning(false);
-        showSnackbar(`Command exited with code ${data.code}`, data.code === 0 ? 'info' : 'warning');
-      }
-    });
-    
-    // Store unsubscribe function
-    unsubscribeRef.current = () => {
-      unsubscribeOutput();
-      unsubscribeClosed();
-    };
-    
+
     return () => {
-      // Clean up
-      stopLogCollection();
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
+      if (commandId) {
+        window.electron.stopCommand(commandId);
       }
     };
   }, [project, navigate]);
-  
-  // Apply filters when logs, searchQuery, or fieldFilters change
+
   useEffect(() => {
-    applyFilters();
-  }, [logs, searchQuery, fieldFilters]);
-  
-  const startLogCollection = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      if (project.source.type === 'command') {
-        const result = await window.electron.startCommand(
-          logSourceId.current,
-          project.source.value
-        );
-        
-        if (result.success) {
-          setIsRunning(true);
-          showSnackbar('Command started successfully', 'success');
-        } else {
-          setError(`Failed to start command: ${result.error}`);
-          showSnackbar(`Failed to start command: ${result.error}`, 'error');
-        }
-      } else if (project.source.type === 'file') {
-        const result = await window.electron.watchFile(
-          logSourceId.current,
-          project.source.value
-        );
-        
-        if (result.success) {
-          setIsRunning(true);
-          showSnackbar('File watching started successfully', 'success');
-        } else {
-          setError(`Failed to watch file: ${result.error}`);
-          showSnackbar(`Failed to watch file: ${result.error}`, 'error');
-        }
+    setLogs([]);
+  }, [project?.id]);
+
+  useEffect(() => {
+    if (autoScroll && tableContainerRef.current) {
+      const container = tableContainerRef.current;
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [logs, autoScroll]);
+
+  const addLogEntry = (logEntry) => {
+    console.log("Adding log entry:", logEntry);
+
+    const logId = crypto.randomUUID();
+    logEntry.id = logId;
+
+    setLogs((prevLogs) => {
+      const exists = prevLogs.some((log) => log.id === logId);
+      if (exists) {
+        console.log("Log entry already exists, skipping");
+        return prevLogs;
       }
+
+      console.log("Adding new log entry to logs array");
+      return [...prevLogs, logEntry];
+    });
+  };
+
+  const startLogCollection = async () => {
+    setLoading(true);
+
+    try {
+      const id = `${project.source.type}-${Date.now()}`;
+      setCommandId(id);
+      if (project.source.type === "command") {
+        await window.electron.startCommand(id, project.source.value);
+      } else if (project.source.type === "file") {
+        await window.electron.watchFile(id, project.source.value);
+      }
+      const unsubscribe = window.electron.onCommandOutput((data) => {
+        if (data.id === id) {
+          if (!data.data || data.data.trim() === "") return;
+
+          try {
+            const parsedData = parser.parseLines(data.data);
+
+            console.log("parsedData :", parsedData);
+
+            for (const log of parsedData) {
+              addLogEntry(log);
+            }
+          } catch (e) {
+            console.error(e);
+            addLogEntry({
+              level: "info",
+              message: data.data.trim(),
+              timestamp: new Date().toLocaleString(),
+              rawTimestamp: new Date().toISOString(),
+              rawLog: data.data,
+            });
+          }
+        }
+      });
+
+      return unsubscribe;
     } catch (error) {
-      console.error('Error starting log collection:', error);
-      setError('An error occurred while starting log collection');
-      showSnackbar('An error occurred while starting log collection', 'error');
+      console.error("Error starting log collection:", error);
     } finally {
       setLoading(false);
     }
   };
-  
-  const stopLogCollection = async () => {
-    try {
-      const result = await window.electron.stopCommand(logSourceId.current);
-      
-      if (result.success) {
-        setIsRunning(false);
-        showSnackbar('Log collection stopped', 'info');
-      } else {
-        console.error('Failed to stop command:', result.error);
-      }
-    } catch (error) {
-      console.error('Error stopping log collection:', error);
-    }
+
+  const handleFilterChange = (e) => {
+    setFilter(e.target.value);
   };
-  
-  const handleLogData = (data) => {
-    // Split data by newlines and process each line
-    const lines = data.split('\n').filter(line => line.trim());
-    
-    if (lines.length === 0) return;
-    
-    const newLogs = lines.map((line, index) => {
-      const parsedLog = parseLog(line, project.parser.type);
-      return {
-        id: `log-${Date.now()}-${index}`,
-        timestamp: new Date().toISOString(),
-        ...parsedLog,
-        _raw: line
-      };
-    });
-    
-    setLogs(prevLogs => {
-      // Limit to 10,000 logs to prevent memory issues
-      const updatedLogs = [...newLogs, ...prevLogs].slice(0, 10000);
-      
-      // Update fields based on all log keys
-      updateFields(updatedLogs);
-      
-      return updatedLogs;
-    });
+
+  const handleLevelFilterChange = (e) => {
+    setLevelFilter(e.target.value);
   };
-  
-  const updateFields = (logs) => {
-    if (logs.length === 0) return;
-    
-    // Get all unique field names from logs
-    const allFields = new Set();
-    logs.forEach(log => {
-      Object.keys(log).forEach(key => {
-        if (!key.startsWith('_') && key !== 'id') {
-          allFields.add(key);
-        }
-      });
-    });
-    
-    // Convert to array and sort
-    const fieldArray = Array.from(allFields).sort();
-    
-    // Only update if fields have changed
-    if (JSON.stringify(fieldArray) !== JSON.stringify(fields)) {
-      setFields(fieldArray);
-    }
-  };
-  
-  const applyFilters = () => {
-    let filtered = [...logs];
-    
-    // Apply field filters
-    Object.entries(fieldFilters).forEach(([field, values]) => {
-      if (values && values.length > 0) {
-        filtered = filtered.filter(log => 
-          values.includes(String(log[field]))
-        );
-      }
-    });
-    
-    // Apply search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      
-      // Check if it's a field-specific search (e.g., "level:ERROR")
-      const fieldSearch = query.match(/^(\w+):(.+)$/);
-      
-      if (fieldSearch) {
-        const [, field, value] = fieldSearch;
-        filtered = filtered.filter(log => {
-          const logValue = log[field];
-          return logValue && String(logValue).toLowerCase().includes(value.trim());
-        });
-      } else {
-        // Full text search across all fields
-        filtered = filtered.filter(log => {
-          return Object.entries(log).some(([key, value]) => {
-            if (key.startsWith('_') || key === 'id') return false;
-            return String(value).toLowerCase().includes(query);
-          });
-        });
-      }
-    }
-    
-    setFilteredLogs(filtered);
-  };
-  
-  const handleSearchChange = (event) => {
-    setSearchQuery(event.target.value);
-  };
-  
-  const clearSearch = () => {
-    setSearchQuery('');
-  };
-  
-  const toggleFieldFilter = (field, value) => {
-    setFieldFilters(prev => {
-      const current = prev[field] || [];
-      const updated = current.includes(value)
-        ? current.filter(v => v !== value)
-        : [...current, value];
-      
-      return {
-        ...prev,
-        [field]: updated
-      };
-    });
-  };
-  
-  const getUniqueFieldValues = (field) => {
-    const values = new Set();
-    logs.forEach(log => {
-      if (log[field] !== undefined) {
-        values.add(String(log[field]));
-      }
-    });
-    return Array.from(values).sort();
-  };
-  
+
   const handleMenuOpen = (event) => {
-    setMenuAnchorEl(event.currentTarget);
+    setAnchorEl(event.currentTarget);
   };
-  
+
   const handleMenuClose = () => {
-    setMenuAnchorEl(null);
+    setAnchorEl(null);
   };
-  
-  const handleExport = () => {
-    setExportDialog(true);
+
+  const handleExportLogs = () => {
     handleMenuClose();
+
+    console.log("Export logs");
   };
-  
-  const exportLogs = (format) => {
+
+  const handleGoHome = () => {
+    if (commandId) {
+      window.electron.stopCommand(commandId);
+    }
+    navigate("/");
+  };
+
+  const parseDate = (dateStr) => {
+    if (!dateStr) return NaN;
+
+    if (!isNaN(Number(dateStr))) {
+      return Number(dateStr);
+    }
+
     try {
-      const logsToExport = filteredLogs.length > 0 ? filteredLogs : logs;
-      let content = '';
-      
-      if (format === 'json') {
-        content = JSON.stringify(logsToExport, null, 2);
-      } else if (format === 'csv') {
-        // Get all unique fields
-        const allFields = new Set();
-        logsToExport.forEach(log => {
-          Object.keys(log).forEach(key => {
-            if (!key.startsWith('_') && key !== 'id') {
-              allFields.add(key);
-            }
-          });
-        });
-        
-        const headers = Array.from(allFields);
-        content = headers.join(',') + '\n';
-        
-        logsToExport.forEach(log => {
-          const row = headers.map(field => {
-            const value = log[field] !== undefined ? log[field] : '';
-            // Escape commas and quotes in CSV
-            return `"${String(value).replace(/"/g, '""')}"`;
-          });
-          content += row.join(',') + '\n';
-        });
+      let timestamp = new Date(dateStr).getTime();
+      if (!isNaN(timestamp)) return timestamp;
+
+      const europeanMatch = dateStr.match(
+        /(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})\s*(\d{1,2})?:?(\d{1,2})?:?(\d{1,2})?/
+      );
+      if (europeanMatch) {
+        const [_, day, month, year, hours = 0, minutes = 0, seconds = 0] =
+          europeanMatch;
+        timestamp = new Date(
+          year,
+          month - 1,
+          day,
+          hours,
+          minutes,
+          seconds
+        ).getTime();
+        if (!isNaN(timestamp)) return timestamp;
       }
-      
-      // Create a blob and download
-      const blob = new Blob([content], { type: format === 'json' ? 'application/json' : 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `logviewer-export-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      showSnackbar(`Logs exported successfully as ${format.toUpperCase()}`, 'success');
-    } catch (error) {
-      console.error('Error exporting logs:', error);
-      showSnackbar('Error exporting logs', 'error');
-    } finally {
-      setExportDialog(false);
+
+      const americanMatch = dateStr.match(
+        /(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})\s*(\d{1,2})?:?(\d{1,2})?:?(\d{1,2})?/
+      );
+      if (americanMatch) {
+        const [_, month, day, year, hours = 0, minutes = 0, seconds = 0] =
+          americanMatch;
+        timestamp = new Date(
+          year,
+          month - 1,
+          day,
+          hours,
+          minutes,
+          seconds
+        ).getTime();
+        if (!isNaN(timestamp)) return timestamp;
+      }
+
+      const timeMatch = dateStr.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+      if (timeMatch) {
+        const [_, hours, minutes, seconds = 0] = timeMatch;
+        const today = new Date();
+        timestamp = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate(),
+          hours,
+          minutes,
+          seconds
+        ).getTime();
+        if (!isNaN(timestamp)) return timestamp;
+      }
+
+      const log4jMatch = dateStr.match(
+        /(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2}:\d{2}(?:\.\d{1,3})?)/
+      );
+      if (log4jMatch) {
+        const [_, datePart, timePart] = log4jMatch;
+        timestamp = new Date(`${datePart}T${timePart}`).getTime();
+        if (!isNaN(timestamp)) return timestamp;
+      }
+
+      return NaN;
+    } catch (e) {
+      console.error("Erreur lors du parsing de la date:", e);
+      return NaN;
     }
   };
-  
-  const showSnackbar = (message, severity = 'info') => {
-    setSnackbar({
-      open: true,
-      message,
-      severity
+
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return "";
+
+    if (/^\d{2}:\d{2}:\d{2}/.test(timestamp)) {
+      return timestamp;
+    }
+
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return timestamp;
+      }
+
+      return date.toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+    } catch (e) {
+      return timestamp;
+    }
+  };
+
+  const parseSearchQuery = (query) => {
+    const filters = {};
+    const timeRangeFilters = {};
+    const parts = query.split(" ");
+
+    let textFilter = "";
+
+    parts.forEach((part) => {
+      if (part.includes(":")) {
+        let [key, ...valueParts] = part.split(":");
+        let value = valueParts.join(":");
+
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.substring(1, value.length - 1);
+        }
+
+        const keyLower = key.toLowerCase();
+
+        if (keyLower.endsWith("_from") || keyLower.endsWith("_to")) {
+          const baseKey = keyLower.replace(/_from$|_to$/, "");
+          if (!timeRangeFilters[baseKey]) {
+            timeRangeFilters[baseKey] = {};
+          }
+
+          if (keyLower.endsWith("_from")) {
+            timeRangeFilters[baseKey].from = value;
+          } else {
+            timeRangeFilters[baseKey].to = value;
+          }
+        } else {
+          if (!filters[keyLower]) {
+            filters[keyLower] = [];
+          }
+          filters[keyLower].push(value.toLowerCase());
+        }
+      } else {
+        textFilter += (textFilter ? " " : "") + part;
+      }
     });
+
+    return { filters, timeRangeFilters, textFilter };
   };
-  
-  const handleSnackbarClose = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
-  
-  const handleBack = () => {
-    navigate('/');
-  };
-  
-  // Prepare columns for DataGrid
-  const columns = fields.map(field => ({
-    field,
-    headerName: field.charAt(0).toUpperCase() + field.slice(1),
-    flex: field === 'message' ? 2 : 1,
-    minWidth: 150,
-    renderCell: (params) => {
-      if (field === 'level') {
-        return (
-          <Chip 
-            label={params.value || 'unknown'} 
-            size="small" 
-            color={getLevelColor(params.value)}
-            variant={mode === 'dark' ? 'outlined' : 'filled'}
-          />
-        );
-      }
-      return params.value;
+
+  const filteredLogs = logs.filter((log) => {
+    if (
+      columns.some((col) => col.id === "level") &&
+      levelFilter !== "all" &&
+      log.level &&
+      log.level.toLowerCase() !== levelFilter.toLowerCase()
+    ) {
+      return false;
     }
-  }));
-  
-  return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
-      {/* App Bar */}
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            edge="start"
-            onClick={handleBack}
-            sx={{ mr: 2 }}
-          >
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {project?.name || 'Log Viewer'}
-          </Typography>
-          
-          {/* Search Bar */}
-          <Box sx={{ display: 'flex', bgcolor: 'background.paper', borderRadius: 1, px: 1, width: '30%' }}>
-            <IconButton sx={{ p: '10px' }} aria-label="search">
-              <SearchIcon />
-            </IconButton>
-            <TextField
-              sx={{ ml: 1, flex: 1 }}
-              placeholder="Search logs or field:value"
-              value={searchQuery}
-              onChange={handleSearchChange}
-              variant="standard"
-              InputProps={{ disableUnderline: true }}
-            />
-            {searchQuery && (
-              <IconButton sx={{ p: '10px' }} aria-label="clear" onClick={clearSearch}>
-                <ClearIcon />
-              </IconButton>
-            )}
-          </Box>
-          
-          {/* Control Buttons */}
-          <Box sx={{ display: 'flex', ml: 2 }}>
-            <Tooltip title={isRunning ? "Stop Log Collection" : "Start Log Collection"}>
-              <IconButton
-                color="inherit"
-                onClick={isRunning ? stopLogCollection : startLogCollection}
-                disabled={loading}
-              >
-                {loading ? <CircularProgress size={24} color="inherit" /> : 
-                 isRunning ? <StopIcon /> : <PlayArrowIcon />}
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Toggle Theme">
-              <IconButton color="inherit" onClick={toggleTheme}>
-                {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="More Options">
-              <IconButton
-                color="inherit"
-                onClick={handleMenuOpen}
-              >
-                <MoreVertIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Toolbar>
-      </AppBar>
-      
-      {/* Options Menu */}
-      <Menu
-        anchorEl={menuAnchorEl}
-        open={Boolean(menuAnchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem onClick={handleExport}>
-          <DownloadIcon fontSize="small" sx={{ mr: 1 }} />
-          Export Logs
-        </MenuItem>
-        <MenuItem onClick={() => { setLogs([]); handleMenuClose(); }}>
-          <ClearIcon fontSize="small" sx={{ mr: 1 }} />
-          Clear Logs
-        </MenuItem>
-        <MenuItem onClick={() => { updateFields(logs); handleMenuClose(); }}>
-          <RefreshIcon fontSize="small" sx={{ mr: 1 }} />
-          Refresh Fields
-        </MenuItem>
-      </Menu>
-      
-      {/* Export Dialog */}
-      <Dialog open={exportDialog} onClose={() => setExportDialog(false)}>
-        <DialogTitle>Export Logs</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Choose a format to export {filteredLogs.length > 0 ? filteredLogs.length : logs.length} logs:
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setExportDialog(false)}>Cancel</Button>
-          <Button onClick={() => exportLogs('json')} variant="outlined">JSON</Button>
-          <Button onClick={() => exportLogs('csv')} variant="contained">CSV</Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Left Drawer - Field Filters */}
-      <Drawer
-        variant="permanent"
+
+    if (!filter) return true;
+
+    const { filters, timeRangeFilters, textFilter } = parseSearchQuery(filter);
+
+    for (const [key, values] of Object.entries(filters)) {
+      if (columns.some((col) => col.id === key)) {
+        if (!log[key]) return false;
+
+        const logValue = log[key].toString().toLowerCase();
+
+        const matchesAnyValue = values.some((value) => {
+          if (value.includes("*")) {
+            const regexPattern = value.replace(/\*/g, ".*");
+            const regex = new RegExp(`^${regexPattern}$`);
+            return regex.test(logValue);
+          } else {
+            return logValue === value;
+          }
+        });
+
+        if (!matchesAnyValue) {
+          return false;
+        }
+      }
+    }
+
+    for (const [key, range] of Object.entries(timeRangeFilters)) {
+      if (columns.some((col) => col.id === key) && log[key]) {
+        const logValue = log[key];
+        let logTimestamp;
+
+        try {
+          logTimestamp = parseDate(logValue);
+
+          if (isNaN(logTimestamp)) {
+            logTimestamp = logValue;
+            continue;
+          }
+
+          if (range.from) {
+            const fromTimestamp = parseDate(range.from);
+            if (!isNaN(fromTimestamp) && logTimestamp < fromTimestamp) {
+              return false;
+            }
+          }
+
+          if (range.to) {
+            const toTimestamp = parseDate(range.to);
+            if (!isNaN(toTimestamp) && logTimestamp > toTimestamp) {
+              return false;
+            }
+          }
+        } catch (e) {
+          console.error(
+            `Erreur lors du filtrage par intervalle pour ${key}:`,
+            e
+          );
+        }
+      }
+    }
+
+    if (
+      textFilter &&
+      log.message &&
+      !log.message.toLowerCase().includes(textFilter.toLowerCase())
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const getLevelColor = (level) => {
+    if (!level) return "default";
+
+    switch (level.toLowerCase()) {
+      case "error":
+        return "error";
+      case "warn":
+      case "warning":
+        return "warning";
+      case "info":
+        return "info";
+      case "debug":
+        return "success";
+      default:
+        return "default";
+    }
+  };
+
+  const toggleFilter = (filterType, filterValue) => {
+    const filterString = `${filterType}:"${filterValue}"`;
+
+    const currentFilters = filter.split(" ").filter((f) => f.trim() !== "");
+
+    const filterIndex = currentFilters.findIndex(
+      (f) => f.toLowerCase() === filterString.toLowerCase()
+    );
+
+    if (filterIndex >= 0) {
+      currentFilters.splice(filterIndex, 1);
+    } else {
+      currentFilters.push(filterString);
+    }
+
+    setFilter(currentFilters.join(" "));
+  };
+
+  const setRangeFilter = (filterType, value) => {
+    const currentFilters = filter.split(" ").filter((f) => f.trim() !== "");
+
+    const filterIndex = currentFilters.findIndex((f) =>
+      f.toLowerCase().startsWith(`${filterType.toLowerCase()}:`)
+    );
+
+    const filterString = value ? `${filterType}:${value}` : "";
+
+    if (filterIndex >= 0) {
+      if (value) {
+        currentFilters[filterIndex] = filterString;
+      } else {
+        currentFilters.splice(filterIndex, 1);
+      }
+    } else if (value) {
+      currentFilters.push(filterString);
+    }
+
+    setFilter(currentFilters.join(" "));
+  };
+
+  const handleScroll = (e) => {
+    const container = e.target;
+    const isScrolledToBottom =
+      Math.abs(
+        container.scrollHeight - container.scrollTop - container.clientHeight
+      ) < 10;
+
+    if (!isScrolledToBottom && autoScroll) {
+      setAutoScroll(false);
+    }
+
+    if (isScrolledToBottom && !autoScroll) {
+      setAutoScroll(true);
+    }
+  };
+
+  const renderLog = (column, log) => {
+    return (
+      <TableCell
+        key={column.id}
         sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: 'border-box' },
+          fontFamily: "monospace",
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
         }}
       >
-        <Toolbar />
-        <Box sx={{ overflow: 'auto', p: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" component="div">
-              Fields
-            </Typography>
-            <Tooltip title="Refresh Fields">
-              <IconButton size="small" onClick={() => updateFields(logs)}>
-                <RefreshIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          
-          <Divider sx={{ mb: 2 }} />
-          
-          {fields.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No fields detected yet. Start log collection to see available fields.
-            </Typography>
-          ) : (
-            <List>
-              {fields.map((field) => {
-                const values = getUniqueFieldValues(field);
-                return (
-                  <Box key={field} sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                      {field.charAt(0).toUpperCase() + field.slice(1)}
-                    </Typography>
-                    
-                    {values.length > 0 ? (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                        {values.map((value) => (
-                          <Chip
-                            key={`${field}-${value}`}
-                            label={value}
-                            size="small"
-                            color={fieldFilters[field]?.includes(value) ? 'primary' : 'default'}
-                            onClick={() => toggleFieldFilter(field, value)}
-                            variant={fieldFilters[field]?.includes(value) ? 'filled' : 'outlined'}
-                            sx={{ mb: 1 }}
-                          />
-                        ))}
-                      </Box>
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        No values for this field
-                      </Typography>
-                    )}
-                  </Box>
-                );
-              })}
-            </List>
-          )}
-        </Box>
-      </Drawer>
-      
-      {/* Main Content */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3, pt: 0 }}>
-        <Toolbar />
-        
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        
-        {/* Log Table */}
-        <Paper sx={{ height: 'calc(100vh - 140px)', width: '100%' }}>
-          <DataGrid
-            rows={filteredLogs}
-            columns={columns}
-            initialState={{
-              pagination: {
-                paginationModel: { page: 0, pageSize: 100 },
-              },
-              sorting: {
-                sortModel: [{ field: 'timestamp', sort: 'desc' }],
-              },
-            }}
-            pageSizeOptions={[25, 50, 100]}
-            disableRowSelectionOnClick
-            getRowClassName={(params) => {
-              const level = params.row.level?.toLowerCase();
-              if (level?.includes('error')) return 'error-row';
-              if (level?.includes('warn')) return 'warning-row';
-              return '';
-            }}
-            sx={{
-              '& .error-row': {
-                bgcolor: (theme) => 
-                  theme.palette.mode === 'dark' ? 'rgba(255, 0, 0, 0.1)' : 'rgba(255, 0, 0, 0.05)',
-              },
-              '& .warning-row': {
-                bgcolor: (theme) => 
-                  theme.palette.mode === 'dark' ? 'rgba(255, 255, 0, 0.1)' : 'rgba(255, 255, 0, 0.05)',
-              },
-            }}
-          />
-        </Paper>
-        
-        {/* Auto-scroll Control */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={autoScroll}
-                onChange={(e) => setAutoScroll(e.target.checked)}
-              />
+        {log[column.id]}
+      </TableCell>
+    );
+  };
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        bgcolor: "background.default",
+      }}
+    >
+      <TitleBar title={project?.name || "Chopr"} />
+
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          p: 1,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Tooltip title="Retour à l'accueil">
+            <IconButton onClick={handleGoHome} size="small">
+              <HomeIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip
+            title={
+              autoScroll
+                ? "Désactiver le défilement automatique"
+                : "Activer le défilement automatique"
             }
-            label="Auto-scroll to new logs"
-          />
+          >
+            <IconButton
+              onClick={() => setAutoScroll(!autoScroll)}
+              size="small"
+              sx={{
+                ml: 1,
+                color: autoScroll ? "primary.main" : "text.secondary",
+              }}
+            >
+              <VerticalAlignBottomIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        <Box sx={{ display: "flex", alignItems: "center", flexGrow: 1, mx: 2 }}>
+          <Box
+            sx={{
+              position: "relative",
+              width: "100%",
+              maxWidth: 600,
+              mx: "auto",
+            }}
+          >
+            <TextField
+              placeholder="Rechercher dans les logs (ex: thread:main level:error)..."
+              variant="outlined"
+              size="small"
+              fullWidth
+              value={filter}
+              onChange={handleFilterChange}
+              InputProps={{
+                startAdornment: <SearchIcon color="action" sx={{ mr: 1 }} />,
+              }}
+            />
+            {filter && searchSuggestions.length > 0 && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: "100%",
+                  left: 0,
+                  right: 0,
+                  zIndex: 10,
+                  mt: 0.5,
+                  bgcolor: "background.paper",
+                  boxShadow: 3,
+                  borderRadius: 1,
+                  maxHeight: 200,
+                  overflow: "auto",
+                }}
+              >
+                {searchSuggestions
+                  .filter((suggestion) =>
+                    suggestion.toLowerCase().includes(filter.toLowerCase())
+                  )
+                  .slice(0, 5)
+                  .map((suggestion, index) => (
+                    <Box
+                      key={index}
+                      sx={{
+                        p: 1,
+                        cursor: "pointer",
+                        "&:hover": { bgcolor: "action.hover" },
+                      }}
+                      onClick={() => setFilter(suggestion)}
+                    >
+                      {suggestion}
+                    </Box>
+                  ))}
+              </Box>
+            )}
+          </Box>
         </Box>
       </Box>
-      
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+
+      <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden" }}>
+        {/* Volet de filtres à gauche */}
+        <Box
+          sx={{
+            width: 250,
+            borderRight: "1px solid",
+            borderColor: "divider",
+            p: 2,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "auto",
+          }}
+        >
+          <Typography variant="subtitle2" gutterBottom>
+            Filtres rapides
+          </Typography>
+
+          {logs.length > 0 && columns.length > 0 && (
+            <>
+              {/* Cas spécial pour le niveau (level) avec code couleur */}
+              {columns.some((col) => col.id === "level") && (
+                <>
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 2, mb: 1, fontWeight: "bold" }}
+                  >
+                    Niveau de log
+                  </Typography>
+                  {["info", "debug", "warn", "error"].map((level) => (
+                    <Box
+                      key={level}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        mb: 0.5,
+                        p: 0.5,
+                        borderRadius: 1,
+                        cursor: "pointer",
+                        bgcolor: filter.toLowerCase().includes(`level:${level}`)
+                          ? "action.selected"
+                          : "transparent",
+                        "&:hover": { bgcolor: "action.hover" },
+                      }}
+                      onClick={() => toggleFilter("level", level)}
+                    >
+                      <Chip
+                        label={level}
+                        size="small"
+                        color={getLevelColor(level)}
+                        sx={{ mr: 1, textTransform: "capitalize" }}
+                      />
+                      <Typography variant="body2">
+                        {level.charAt(0).toUpperCase() + level.slice(1)}
+                      </Typography>
+                    </Box>
+                  ))}
+                </>
+              )}
+
+              {/* Génération dynamique des filtres pour toutes les autres colonnes */}
+              {columns
+                .filter(
+                  (col) =>
+                    col.id !== "level" &&
+                    col.id !== "message" &&
+                    col.id !== "rawLog" &&
+                    col.id !== "id"
+                )
+                .map((column) => {
+                  const isTimeColumn = [
+                    "date",
+                    "time",
+                    "timestamp",
+                    "datetime",
+                  ].some((timeWord) =>
+                    column.id.toLowerCase().includes(timeWord)
+                  );
+
+                  if (isTimeColumn) {
+                    return (
+                      <React.Fragment key={column.id}>
+                        <Typography
+                          variant="body2"
+                          sx={{ mt: 2, mb: 1, fontWeight: "bold" }}
+                        >
+                          {column.label}
+                        </Typography>
+                        <Box sx={{ p: 1 }}>
+                          <Typography
+                            variant="caption"
+                            display="block"
+                            gutterBottom
+                          >
+                            Filtrer par intervalle
+                          </Typography>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 1,
+                              alignItems: "center",
+                            }}
+                          >
+                            <TextField
+                              size="small"
+                              placeholder="Début"
+                              variant="outlined"
+                              sx={{ flex: 1 }}
+                              onChange={(e) => {
+                                setRangeFilter(
+                                  `${column.id}_from`,
+                                  e.target.value
+                                );
+                              }}
+                            />
+                            <Typography variant="body2">à</Typography>
+                            <TextField
+                              size="small"
+                              placeholder="Fin"
+                              variant="outlined"
+                              sx={{ flex: 1 }}
+                              onChange={(e) => {
+                                setRangeFilter(
+                                  `${column.id}_to`,
+                                  e.target.value
+                                );
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                      </React.Fragment>
+                    );
+                  } else {
+                    const values = Array.from(
+                      new Set(logs.map((log) => log[column.id]).filter(Boolean))
+                    );
+                    if (values.length === 0) return null;
+
+                    return (
+                      <React.Fragment key={column.id}>
+                        <Typography
+                          variant="body2"
+                          sx={{ mt: 2, mb: 1, fontWeight: "bold" }}
+                        >
+                          {column.label}
+                        </Typography>
+                        {values.slice(0, 10).map((value) => (
+                          <Box
+                            key={`${column.id}-${value}`}
+                            sx={{
+                              p: 0.5,
+                              borderRadius: 1,
+                              cursor: "pointer",
+                              "&:hover": { bgcolor: "action.hover" },
+                            }}
+                            onClick={() => toggleFilter(column.id, value)}
+                          >
+                            <Typography variant="body2" noWrap>
+                              {value}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </React.Fragment>
+                    );
+                  }
+                })}
+            </>
+          )}
+        </Box>
+
+        {/* Tableau des logs */}
+        <TableContainer
+          ref={tableContainerRef}
+          sx={{ flexGrow: 1, overflow: "auto" }}
+          onScroll={handleScroll}
+        >
+          <Table stickyHeader size="small">
+            <TableHead>
+              <TableRow>
+                {columns.map((column) => (
+                  <TableCell
+                    key={column.id}
+                    width={column.width}
+                    sx={{
+                      fontWeight: "bold",
+                      whiteSpace: "nowrap",
+                      backgroundColor: (theme) =>
+                        theme.palette.background.paper,
+                    }}
+                  >
+                    {column.label}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} align="center">
+                    <Typography>Loading logs...</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : filteredLogs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} align="center">
+                    <Typography>No logs to display</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredLogs.map((log, index) => (
+                  <TableRow
+                    key={index}
+                    hover
+                    sx={{
+                      "&:hover": {
+                        backgroundColor: (theme) => theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    {columns.map((column) => renderLog(column, log))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
     </Box>
   );
 };
