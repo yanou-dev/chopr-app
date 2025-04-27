@@ -20,10 +20,9 @@ import {
   Typography,
 } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
-import SettingsIcon from "@mui/icons-material/Settings";
-import DownloadIcon from "@mui/icons-material/Download";
 import SearchIcon from "@mui/icons-material/Search";
 import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle"; // Ajout de l'icône de filtre actif
 import TitleBar from "../components/TitleBar";
 import LogParser from "../parsers/LogParser";
 import JSONParser from "../parsers/JSONParser";
@@ -298,6 +297,7 @@ const ViewerPage = ({ project }) => {
     }
   };
 
+  // Fonction pour analyser la requête de recherche
   const parseSearchQuery = (query) => {
     const filters = {};
     const timeRangeFilters = {};
@@ -339,6 +339,24 @@ const ViewerPage = ({ project }) => {
     });
 
     return { filters, timeRangeFilters, textFilter };
+  };
+
+  // Vérifier si un filtre spécifique est actif
+  const isFilterActive = (filterType, filterValue) => {
+    const { filters } = parseSearchQuery(filter);
+    return (
+      filters[filterType.toLowerCase()] &&
+      filters[filterType.toLowerCase()].some(
+        (value) => value.toLowerCase() === filterValue.toLowerCase()
+      )
+    );
+  };
+
+  // Vérifier si un filtre de plage temporelle est actif
+  const isRangeFilterActive = (filterType) => {
+    const { timeRangeFilters } = parseSearchQuery(filter);
+    const baseKey = filterType.toLowerCase().replace(/_from$|_to$/, "");
+    return timeRangeFilters[baseKey] !== undefined;
   };
 
   const filteredLogs = logs.filter((log) => {
@@ -647,34 +665,44 @@ const ViewerPage = ({ project }) => {
                   >
                     Niveau de log
                   </Typography>
-                  {["info", "debug", "warn", "error"].map((level) => (
-                    <Box
-                      key={level}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        mb: 0.5,
-                        p: 0.5,
-                        borderRadius: 1,
-                        cursor: "pointer",
-                        bgcolor: filter.toLowerCase().includes(`level:${level}`)
-                          ? "action.selected"
-                          : "transparent",
-                        "&:hover": { bgcolor: "action.hover" },
-                      }}
-                      onClick={() => toggleFilter("level", level)}
-                    >
-                      <Chip
-                        label={level}
-                        size="small"
-                        color={getLevelColor(level)}
-                        sx={{ mr: 1, textTransform: "capitalize" }}
-                      />
-                      <Typography variant="body2">
-                        {level.charAt(0).toUpperCase() + level.slice(1)}
-                      </Typography>
-                    </Box>
-                  ))}
+                  {["info", "debug", "warn", "error"].map((level) => {
+                    // Vérifier si ce filtre de niveau est actif
+                    const isActive = isFilterActive("level", level);
+
+                    return (
+                      <Box
+                        key={level}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          mb: 0.5,
+                          p: 0.5,
+                          borderRadius: 1,
+                          cursor: "pointer",
+                          bgcolor: isActive ? "action.selected" : "transparent",
+                          "&:hover": { bgcolor: "action.hover" },
+                        }}
+                        onClick={() => toggleFilter("level", level)}
+                      >
+                        <Chip
+                          label={level}
+                          size="small"
+                          color={getLevelColor(level)}
+                          sx={{ mr: 1, textTransform: "capitalize" }}
+                        />
+                        <Typography variant="body2">
+                          {level.charAt(0).toUpperCase() + level.slice(1)}
+                        </Typography>
+                        {isActive && (
+                          <CheckCircleIcon
+                            color="primary"
+                            fontSize="small"
+                            sx={{ ml: "auto" }}
+                          />
+                        )}
+                      </Box>
+                    );
+                  })}
                 </>
               )}
 
@@ -698,13 +726,26 @@ const ViewerPage = ({ project }) => {
                   );
 
                   if (isTimeColumn) {
+                    // Vérifier si ce filtre de plage est actif
+                    const isActive = isRangeFilterActive(column.id);
+
                     return (
                       <React.Fragment key={column.id}>
                         <Typography
                           variant="body2"
-                          sx={{ mt: 2, mb: 1, fontWeight: "bold" }}
+                          sx={{
+                            mt: 2,
+                            mb: 1,
+                            fontWeight: "bold",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
                         >
-                          {column.label}
+                          <span>{column.label}</span>
+                          {isActive && (
+                            <CheckCircleIcon color="primary" fontSize="small" />
+                          )}
                         </Typography>
                         <Box sx={{ p: 1 }}>
                           <Typography
@@ -764,22 +805,43 @@ const ViewerPage = ({ project }) => {
                         >
                           {column.label}
                         </Typography>
-                        {values.slice(0, 10).map((value) => (
-                          <Box
-                            key={`${column.id}-${value}`}
-                            sx={{
-                              p: 0.5,
-                              borderRadius: 1,
-                              cursor: "pointer",
-                              "&:hover": { bgcolor: "action.hover" },
-                            }}
-                            onClick={() => toggleFilter(column.id, value)}
-                          >
-                            <Typography variant="body2" noWrap>
-                              {value}
-                            </Typography>
-                          </Box>
-                        ))}
+                        {values.slice(0, 10).map((value) => {
+                          // Vérifier si ce filtre spécifique est actif
+                          const isActive = isFilterActive(column.id, value);
+
+                          return (
+                            <Box
+                              key={`${column.id}-${value}`}
+                              sx={{
+                                p: 0.5,
+                                borderRadius: 1,
+                                cursor: "pointer",
+                                bgcolor: isActive
+                                  ? "action.selected"
+                                  : "transparent",
+                                "&:hover": { bgcolor: "action.hover" },
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                              onClick={() => toggleFilter(column.id, value)}
+                            >
+                              <Typography
+                                variant="body2"
+                                noWrap
+                                sx={{ flexGrow: 1 }}
+                              >
+                                {value}
+                              </Typography>
+                              {isActive && (
+                                <CheckCircleIcon
+                                  color="primary"
+                                  fontSize="small"
+                                />
+                              )}
+                            </Box>
+                          );
+                        })}
                       </React.Fragment>
                     );
                   }

@@ -12,6 +12,32 @@
     "eject": "react-scripts eject",
     "electron:build": "electron-builder"
   },
+  "build": {
+    "appId": "dev.yanou.Chopr",
+    "productName": "Chopr",
+    "copyright": "Copyright © 2025",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": "dmg"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development"
+    },
+    "directories": {
+      "output": "dist"
+    },
+    "publish": null
+  },
   "author": "",
   "license": "MIT",
   "dependencies": {
