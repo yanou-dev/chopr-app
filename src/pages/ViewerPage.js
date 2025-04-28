@@ -133,13 +133,13 @@ const ViewerPage = ({ project }) => {
       const gridColumns = newColumns.map((col) => ({
         field: col.id,
         headerName: col.label,
-        width: col.width === "auto" ? 150 : col.width,
-        flex: col.id === "message" ? 1 : 0,
+        // width: col.width === "auto" ? 150 : col.width,
         sortable: true,
         filterable: true,
         resizable: true,
         renderCell: (params) => renderCell(col.id, params.value),
         pinned: pinnedColumns[col.id] || null,
+        hide: columnVisibility[col.field] === false,
       }));
       setColumns(gridColumns);
     });
@@ -280,20 +280,6 @@ const ViewerPage = ({ project }) => {
     setSnackbarOpen(false);
   };
 
-  const handleToggleColumn = (columnId) => {
-    setColumnVisibility((prev) => ({
-      ...prev,
-      [columnId]: !prev[columnId],
-    }));
-  };
-
-  const handlePinColumn = (columnId, pinned) => {
-    setPinnedColumns((prev) => ({
-      ...prev,
-      [columnId]: pinned,
-    }));
-  };
-
   const parseDate = (dateStr) => {
     if (!dateStr) return NaN;
 
@@ -414,17 +400,6 @@ const ViewerPage = ({ project }) => {
     return { filters, timeRangeFilters, textFilter };
   };
 
-  // Check if a specific filter is active
-  const isFilterActive = (filterType, filterValue) => {
-    const { filters } = parseSearchQuery(filter);
-    return (
-      filters[filterType.toLowerCase()] &&
-      filters[filterType.toLowerCase()].some(
-        (value) => value.toLowerCase() === filterValue.toLowerCase()
-      )
-    );
-  };
-
   const getLevelColor = (level) => {
     if (!level) return "default";
 
@@ -492,22 +467,6 @@ const ViewerPage = ({ project }) => {
         {value}
       </Typography>
     );
-  };
-
-  const toggleFilter = (filterType, filterValue) => {
-    const filterString = `${filterType}:"${filterValue}"`;
-    const currentFilters = filter.split(" ").filter((f) => f.trim() !== "");
-    const filterIndex = currentFilters.findIndex(
-      (f) => f.toLowerCase() === filterString.toLowerCase()
-    );
-
-    if (filterIndex >= 0) {
-      currentFilters.splice(filterIndex, 1);
-    } else {
-      currentFilters.push(filterString);
-    }
-
-    setFilter(currentFilters.join(" "));
   };
 
   const filteredLogs = useMemo(() => {
@@ -595,13 +554,6 @@ const ViewerPage = ({ project }) => {
     }));
   };
 
-  const getDataGridColumns = () => {
-    return columns.map((col) => ({
-      ...col,
-      hide: columnVisibility[col.field] === false,
-    }));
-  };
-
   return (
     <Box
       sx={{
@@ -621,7 +573,7 @@ const ViewerPage = ({ project }) => {
           <DataGrid
             showToolbar
             rows={getDataGridRows()}
-            columns={getDataGridColumns()}
+            columns={columns}
             density={densityLevel}
             disableRowSelectionOnClick
             loading={loading}
