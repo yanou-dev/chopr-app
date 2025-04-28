@@ -35,6 +35,8 @@ export default {
     /^(?:<(?<priority>\d{1,3})>)?(?:(?<timestamp>[A-Za-z]{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}|\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:[+-]\d{2}:\d{2}|Z)?))\s+(?<host>\S+)\s+(?<app>\S+)(?:\[(?<pid>\d+)\])?:(?<message>.*)$/,
 
     /^(?:<(?<priority>\d{1,3})>)(?<version>\d)\s+(?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:[+-]\d{2}:\d{2}|Z)?)\s+(?<hostname>[\w.-]+)\s+(?<app>[\w.-]+)\s+(?<procid>-|\d+)\s+(?<msgid>-|[\w\d]+)(?:\s*\[(?<structured_data>.*?)\])?(?<message>.*)$/,
+
+    /^(?<date>\d{4}-\d{2}-\d{2})\s+(?<time>\d{2}:\d{2}:\d{2}\.\d{6}[+-]\d{4})\s+(?<host>\S+)\s+(?<process>[^\[]+)\[(?<pid>\d+)\]:\s+(?:\((?<component>[^)]+)\)\s+)?(?:\[(?<identifier>[^\]]+)\]\s+)?(?:\[(?<tag>[^\]]+)\]\s+)?(?<message>.*)$/,
   ],
   elasticsearch: [
     /^\[(?<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2},\d{3})\]\[(?<level>INFO|DEBUG|WARN|ERROR|FATAL)\s*\]\[(?<component>.*?)\]\s+\[(?<node>.*?)\](?:\s+\[(?<index>.*?)\])?\s+(?<message>.*)$/,

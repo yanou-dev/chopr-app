@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A modern desktop application for visualizing logs from various sources",
   "main": "main.js",
+  "homepage": "./",
   "scripts": {
     "start": "electron .",
     "dev": "concurrently \"npm run start\" \"npm run dev:react\"",
@@ -10,12 +11,24 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "electron:build": "electron-builder"
+    "electron:build": "npm run build && electron-builder",
+    "pack": "electron-builder --dir",
+    "dist": "npm run build && electron-builder"
   },
   "build": {
     "appId": "dev.yanou.Chopr",
     "productName": "Chopr",
     "copyright": "Copyright © 2025",
+    "files": [
+      "build/**/*",
+      "main.js",
+      "preload.js",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraMetadata": {
+      "main": "main.js"
+    },
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": "dmg"
@@ -34,6 +47,7 @@
       "category": "Development"
     },
     "directories": {
+      "buildResources": "assets",
       "output": "dist"
     },
     "publish": null

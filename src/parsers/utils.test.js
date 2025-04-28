@@ -56,6 +56,11 @@ const logExamples = {
     '<134>1 2024-01-30T22:15:12.123Z hostname appname 12345 ID47 [exampleSDID@32473 iut="3" eventSource="Application"] Application server restarted after routine maintenance',
     "Nov 11 03:05:18 firewall02 kernel: [12345.123456] iptables: IN=eth0 OUT= MAC=00:50:ba:85:85:ca SRC=192.168.1.100 DST=192.168.1.1 LEN=60 PROTO=TCP SPT=12345 DPT=22",
     "Dec 5 09:22:45 authserver01 sshd[5678]: Failed password for invalid user admin from 10.0.0.15 port 12345 ssh2",
+    "2025-04-28 01:03:53.396092+0200  localhost airportd[395]: (CoreWiFi) [com.apple.WiFiManager:] [corewifi] END REQ [GET BSSID] took 0.000434208s (pid=436 proc=symptomsd bundleID=com.apple.symptomsd codesignID=com.apple.symptomsd service=com.apple.private.corewifi-xpc qos=21 intf=(null) uuid=67B2D err=0 reply=<redacted>",
+    "2025-04-28 14:32:10.123456+0100  MyMac kernel[0]: (IONVMeFamily) AppleNVMeController::setPower entry, mPowerState=0, powerState=1, changeType=1",
+    "2025-04-28 09:15:45.789012+0000  MacBook-Pro.local systemstats[234]: (CoreAnalytics) [com.apple.power:] Battery discharge rate: 15%/h",
+    "2025-04-28 18:24:30.456789+0300  iMac.local WindowServer[123]: [com.apple.display:] Display 1: Resolution changed to 2560x1440",
+    "2025-04-28 22:05:37.321098+0500  localhost loginwindow[89]: User test logged in",
   ],
   elasticsearch: [
     "[2023-05-12T10:15:30,123][INFO ][o.e.n.Node               ] [node-1] initialized",
