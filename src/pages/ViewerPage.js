@@ -9,17 +9,9 @@ import { useNavigate } from "react-router-dom";
 import {
   Box,
   Chip,
-  FormControl,
   IconButton,
-  MenuItem,
-  Select,
   Tooltip,
   Typography,
-  Divider,
-  Switch,
-  FormControlLabel,
-  Drawer,
-  useTheme,
   Button,
   Dialog,
   DialogTitle,
@@ -27,7 +19,6 @@ import {
   DialogActions,
   Alert,
   Snackbar,
-  Slider,
 } from "@mui/material";
 import {
   DataGrid,
@@ -37,22 +28,22 @@ import {
   GridToolbarDensitySelector,
   GridToolbarQuickFilter,
 } from "@mui/x-data-grid";
-import HomeIcon from "@mui/icons-material/Home";
 import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import TitleBar from "../components/TitleBar";
 import LogParser from "../parsers/LogParser";
 import JSONParser from "../parsers/JSONParser";
 
-const CustomToolbar = ({
-  setFilter,
-  filter,
-  handleClearLogs,
-  autoScroll,
-  setAutoScroll,
-  handleGoHome,
-  scrollToBottom,
-}) => {
+const CustomToolbar = (props) => {
+  const {
+    setFilter,
+    filter,
+    handleClearLogs,
+    autoScroll,
+    setAutoScroll,
+    scrollToBottom,
+  } = props;
+
   return (
     <GridToolbarContainer
       sx={{
@@ -61,14 +52,15 @@ const CustomToolbar = ({
         py: 1,
         borderBottom: "1px solid",
         borderColor: "divider",
+        gap: 0.5,
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
         <GridToolbarColumnsButton />
         <GridToolbarFilterButton />
         <GridToolbarDensitySelector />
         <Tooltip title="Clear Logs">
-          <IconButton onClick={handleClearLogs} size="small" sx={{ ml: 1 }}>
+          <IconButton onClick={handleClearLogs} size="small">
             <ClearAllIcon />
           </IconButton>
         </Tooltip>
@@ -85,7 +77,6 @@ const CustomToolbar = ({
             }}
             size="small"
             sx={{
-              ml: 1,
               color: autoScroll ? "primary.main" : "text.secondary",
             }}
           >
@@ -96,12 +87,12 @@ const CustomToolbar = ({
 
       <Box sx={{ display: "flex", alignItems: "center", width: "40%" }}>
         <GridToolbarQuickFilter
-          quickFilterParser={(searchInput) => {
-            setFilter(searchInput);
-            return searchInput.split(" ");
-          }}
+          onChange={(event) => setFilter(event.target.value)}
           value={filter}
-          sx={{ width: "100%", m: 0 }}
+          variant="outlined"
+          size="small"
+          fullWidth
+          sx={{ m: 0 }}
         />
       </Box>
 
@@ -112,11 +103,10 @@ const CustomToolbar = ({
 
 const ViewerPage = ({ project }) => {
   const navigate = useNavigate();
-  const theme = useTheme();
   const parser =
-    project.parser.type === "json"
+    project?.parser?.type === "json"
       ? new JSONParser()
-      : new LogParser(project.parser.type);
+      : new LogParser(project?.parser?.type);
 
   // State variables
   const [logs, setLogs] = useState([]);
@@ -126,14 +116,13 @@ const ViewerPage = ({ project }) => {
   const [levelFilter, setLevelFilter] = useState("all");
   const [commandId, setCommandId] = useState(null);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [pinnedColumns, setPinnedColumns] = useState({});
   const [fontSize, setFontSize] = useState(12);
-  const [densityLevel, setDensityLevel] = useState("standard");
+  const [densityLevel, setDensityLevel] = useState("compact");
 
   // References for auto-scroll
   const gridContainerRef = useRef(null);
@@ -624,16 +613,17 @@ const ViewerPage = ({ project }) => {
     >
       <TitleBar title={project?.name || "Chopr"} />
 
-      <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden" }}>
+      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <Box
           ref={gridContainerRef}
           sx={{ flexGrow: 1, overflow: "hidden", position: "relative" }}
         >
           <DataGrid
+            showToolbar
             rows={getDataGridRows()}
             columns={getDataGridColumns()}
             density={densityLevel}
-            disableSelectionOnClick
+            disableRowSelectionOnClick
             loading={loading}
             getRowClassName={(params) => {
               if (params.row.level) {
@@ -669,6 +659,7 @@ const ViewerPage = ({ project }) => {
               "& .MuiDataGrid-cell": {
                 fontSize: `${fontSize}px`,
                 fontFamily: "monospace",
+                padding: "6px 16px",
               },
               "& .MuiDataGrid-columnHeader": {
                 fontSize: `${fontSize}px`,
@@ -687,10 +678,7 @@ const ViewerPage = ({ project }) => {
                 handleClearLogs,
                 autoScroll,
                 setAutoScroll,
-                handleGoHome,
                 scrollToBottom,
-                showQuickFilter: true,
-                quickFilterProps: { debounceMs: 300 },
               },
             }}
             initialState={{
@@ -702,123 +690,13 @@ const ViewerPage = ({ project }) => {
               },
             }}
             paginationMode="client"
+            columnVisibilityModel={columnVisibility}
+            onColumnVisibilityModelChange={(newModel) =>
+              setColumnVisibility(newModel)
+            }
           />
         </Box>
       </Box>
-
-      {/* Settings Drawer */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        PaperProps={{
-          sx: { width: 300 },
-        }}
-      >
-        <Box sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            Display Settings
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-
-          <Typography variant="subtitle2" gutterBottom>
-            Font Size
-          </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-            <Typography variant="body2" sx={{ mr: 1 }}>
-              Small
-            </Typography>
-            <Slider
-              value={fontSize}
-              min={10}
-              max={18}
-              step={1}
-              onChange={(_, newValue) => setFontSize(newValue)}
-              sx={{ mx: 2 }}
-            />
-            <Typography variant="body2" sx={{ ml: 1 }}>
-              Large
-            </Typography>
-          </Box>
-
-          <Typography variant="subtitle2" gutterBottom>
-            Density
-          </Typography>
-          <FormControl fullWidth sx={{ mb: 2 }}>
-            <Select
-              value={densityLevel}
-              onChange={(e) => setDensityLevel(e.target.value)}
-              size="small"
-            >
-              <MenuItem value="compact">Compact</MenuItem>
-              <MenuItem value="standard">Standard</MenuItem>
-              <MenuItem value="comfortable">Comfortable</MenuItem>
-            </Select>
-          </FormControl>
-
-          <Typography variant="subtitle2" gutterBottom>
-            Visible Columns
-          </Typography>
-          <Box sx={{ mb: 2, maxHeight: 300, overflow: "auto" }}>
-            {columns.map((column) => (
-              <FormControlLabel
-                key={column.field}
-                control={
-                  <Switch
-                    checked={columnVisibility[column.field] !== false}
-                    onChange={() => handleToggleColumn(column.field)}
-                    size="small"
-                  />
-                }
-                label={
-                  <Typography variant="body2">{column.headerName}</Typography>
-                }
-              />
-            ))}
-          </Box>
-
-          <Typography variant="subtitle2" gutterBottom>
-            Pinned Columns
-          </Typography>
-          <Box sx={{ mb: 2 }}>
-            {columns.map((column) => (
-              <Box
-                key={`pin-${column.field}`}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  mb: 1,
-                }}
-              >
-                <Typography variant="body2">{column.headerName}</Typography>
-                <FormControl size="small" sx={{ minWidth: 100 }}>
-                  <Select
-                    value={pinnedColumns[column.field] || "none"}
-                    onChange={(e) =>
-                      handlePinColumn(
-                        column.field,
-                        e.target.value === "none" ? null : e.target.value
-                      )
-                    }
-                    size="small"
-                  >
-                    <MenuItem value="none">None</MenuItem>
-                    <MenuItem value="left">Left</MenuItem>
-                    <MenuItem value="right">Right</MenuItem>
-                  </Select>
-                </FormControl>
-              </Box>
-            ))}
-          </Box>
-
-          <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
-            <Button variant="contained" onClick={() => setDrawerOpen(false)}>
-              Close
-            </Button>
-          </Box>
-        </Box>
-      </Drawer>
 
       {/* Clear Logs Confirmation Dialog */}
       <Dialog
@@ -864,6 +742,8 @@ const ViewerPage = ({ project }) => {
           alignItems: "center",
           bgcolor: "background.paper",
           zIndex: 2,
+          borderTop: "1px solid",
+          borderColor: "divider",
         }}
       >
         <Typography variant="caption" color="text.secondary">

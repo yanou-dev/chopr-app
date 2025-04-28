@@ -217,7 +217,6 @@ const HomePage = ({ setCurrentProject }) => {
                 {recentProjects.map((project) => (
                   <ListItem
                     key={project.id}
-                    button
                     onClick={() => handleOpenRecentProject(project)}
                     secondaryAction={
                       <Tooltip title="Delete">
@@ -234,6 +233,7 @@ const HomePage = ({ setCurrentProject }) => {
                       </Tooltip>
                     }
                     sx={{
+                      cursor: "pointer",
                       borderRadius: 1,
                       mb: 0.5,
                       "&:hover": {
