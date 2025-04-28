@@ -133,7 +133,6 @@ const ViewerPage = ({ project }) => {
       const gridColumns = newColumns.map((col) => ({
         field: col.id,
         headerName: col.label,
-        // width: col.width === "auto" ? 150 : col.width,
         sortable: true,
         filterable: true,
         resizable: true,
