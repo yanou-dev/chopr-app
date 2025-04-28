@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -44,11 +50,10 @@ const CustomToolbar = (props) => {
     setFilter,
     filter,
     handleClearLogs,
-    refreshPaused,
-    setRefreshPaused,
     autoScroll,
     setAutoScroll,
     handleGoHome,
+    scrollToBottom,
   } = props;
 
   return (
@@ -74,23 +79,18 @@ const CustomToolbar = (props) => {
             <ClearAllIcon />
           </IconButton>
         </Tooltip>
-        <Tooltip title={refreshPaused ? "Resume Updates" : "Pause Updates"}>
-          <IconButton
-            onClick={() => setRefreshPaused(!refreshPaused)}
-            size="small"
-            sx={{
-              ml: 1,
-              color: refreshPaused ? "error.main" : "text.secondary",
-            }}
-          >
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
         <Tooltip
           title={autoScroll ? "Disable auto-scroll" : "Enable auto-scroll"}
         >
           <IconButton
-            onClick={() => setAutoScroll(!autoScroll)}
+            onClick={() => {
+              const newAutoScrollState = !autoScroll;
+              setAutoScroll(newAutoScrollState);
+              // Si on active l'auto-scroll, forcer immédiatement un scroll vers le bas
+              if (newAutoScrollState) {
+                setTimeout(scrollToBottom, 0);
+              }
+            }}
             size="small"
             sx={{
               ml: 1,
@@ -146,8 +146,10 @@ const ViewerPage = ({ project }) => {
   const [pinnedColumns, setPinnedColumns] = useState({});
   const [fontSize, setFontSize] = useState(12);
   const [densityLevel, setDensityLevel] = useState("standard");
-  const [refreshPaused, setRefreshPaused] = useState(false);
-  const dataGridRef = useRef(null);
+
+  // Références pour l'auto-scroll
+  const gridContainerRef = useRef(null);
+  const lastAddedLogRef = useRef(null);
 
   useEffect(() => {
     parser.on("columnsChanged", (newColumns) => {
@@ -165,6 +167,39 @@ const ViewerPage = ({ project }) => {
       setColumns(gridColumns);
     });
   }, [pinnedColumns]);
+
+  // Fonction d'auto-scroll
+  const scrollToBottom = useCallback(() => {
+    if (!autoScroll || !gridContainerRef.current) return;
+
+    // Accéder à l'élément DOM qui contient le contenu scrollable
+    const scrollableDiv = gridContainerRef.current.querySelector(
+      ".MuiDataGrid-virtualScroller"
+    );
+
+    if (scrollableDiv) {
+      // Scroll jusqu'en bas avec une animation douce
+      scrollableDiv.scrollTo({
+        top: scrollableDiv.scrollHeight,
+      });
+    }
+  }, [autoScroll]);
+
+  // Effet pour déclencher l'auto-scroll quand de nouveaux logs sont ajoutés
+  useEffect(() => {
+    if (autoScroll && logs.length > 0) {
+      // On garde une référence de l'ID de la dernière ligne
+      const currentLastRow = logs[logs.length - 1].id;
+
+      // On ne scrolle que si une nouvelle ligne a été ajoutée
+      if (currentLastRow !== lastAddedLogRef.current) {
+        lastAddedLogRef.current = currentLastRow;
+
+        // Utiliser un délai pour s'assurer que le DOM est mis à jour
+        setTimeout(scrollToBottom, 100);
+      }
+    }
+  }, [logs, autoScroll, scrollToBottom]);
 
   const generateSearchSuggestions = (logs) => {
     const suggestions = new Set();
@@ -217,39 +252,23 @@ const ViewerPage = ({ project }) => {
     setLogs([]);
   }, [project?.id]);
 
-  useEffect(() => {
-    if (autoScroll && logs.length > 0) {
-      // Scroll to the bottom when new logs are added
-      const gridApi = dataGridRef.current?.apiRef?.current;
-      if (gridApi) {
-        setTimeout(() => {
-          gridApi.scrollToIndexes({
-            rowIndex: logs.length - 1,
-          });
-        }, 100);
-      }
-    }
-  }, [logs, autoScroll]);
-
   const addLogEntry = (logEntry) => {
-    if (!refreshPaused) {
-      const logId = crypto.randomUUID();
-      logEntry.id = logId;
+    const logId = crypto.randomUUID();
+    logEntry.id = logId;
 
-      setLogs((prevLogs) => {
-        const exists = prevLogs.some((log) => log.id === logId);
-        if (exists) {
-          return prevLogs;
-        }
+    setLogs((prevLogs) => {
+      const exists = prevLogs.some((log) => log.id === logId);
+      if (exists) {
+        return prevLogs;
+      }
 
-        // Keep a maximum of 10,000 logs to prevent performance issues
-        const newLogs = [...prevLogs, logEntry];
-        if (newLogs.length > 10000) {
-          return newLogs.slice(newLogs.length - 10000);
-        }
-        return newLogs;
-      });
-    }
+      // Garder un maximum de 10,000 logs pour éviter les problèmes de performance
+      const newLogs = [...prevLogs, logEntry];
+      if (newLogs.length > 10000) {
+        return newLogs.slice(newLogs.length - 10000);
+      }
+      return newLogs;
+    });
   };
 
   const startLogCollection = async () => {
@@ -274,13 +293,14 @@ const ViewerPage = ({ project }) => {
             }
           } catch (e) {
             console.error(e);
-            addLogEntry({
+            const logEntry = {
               level: "info",
               message: data.data.trim(),
               timestamp: new Date().toLocaleString(),
               rawTimestamp: new Date().toISOString(),
               rawLog: data.data,
-            });
+            };
+            addLogEntry(logEntry);
           }
         }
       });
@@ -726,9 +746,11 @@ const ViewerPage = ({ project }) => {
 
       <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden" }}>
         {/* DataGrid - Main log display */}
-        <Box sx={{ flexGrow: 1, overflow: "hidden", position: "relative" }}>
+        <Box
+          ref={gridContainerRef}
+          sx={{ flexGrow: 1, overflow: "hidden", position: "relative" }}
+        >
           <DataGrid
-            ref={dataGridRef}
             rows={getDataGridRows()}
             columns={getDataGridColumns()}
             density={densityLevel}
@@ -784,11 +806,10 @@ const ViewerPage = ({ project }) => {
                 setFilter,
                 filter,
                 handleClearLogs,
-                refreshPaused,
-                setRefreshPaused,
                 autoScroll,
                 setAutoScroll,
                 handleGoHome,
+                scrollToBottom,
                 showQuickFilter: true,
                 quickFilterProps: { debounceMs: 300 },
               },
@@ -797,7 +818,12 @@ const ViewerPage = ({ project }) => {
               sorting: {
                 sortModel: [],
               },
+              pagination: {
+                paginationModel: { pageSize: 100 },
+              },
             }}
+            pageSizeOptions={[100]}
+            paginationMode="client"
           />
         </Box>
       </Box>
@@ -964,7 +990,6 @@ const ViewerPage = ({ project }) => {
       >
         <Typography variant="caption" color="text.secondary">
           {filteredLogs.length} of {logs.length} logs displayed
-          {refreshPaused && " (Updates paused)"}
         </Typography>
       </Box>
     </Box>
