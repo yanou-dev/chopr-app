@@ -124,25 +124,29 @@ const ViewerPage = ({ project }) => {
   const [fontSize, setFontSize] = useState(12);
   const [densityLevel, setDensityLevel] = useState("compact");
 
-  // References for auto-scroll
   const gridContainerRef = useRef(null);
   const lastAddedLogRef = useRef(null);
+  const apiRef = useRef(null);
 
   useEffect(() => {
     parser.on("columnsChanged", (newColumns) => {
-      const gridColumns = newColumns.map((col) => ({
-        field: col.id,
-        headerName: col.label,
-        sortable: true,
-        filterable: true,
-        resizable: true,
-        renderCell: (params) => renderCell(col.id, params.value),
-        pinned: pinnedColumns[col.id] || null,
-        hide: columnVisibility[col.field] === false,
-      }));
+      const gridColumns = newColumns.map((col) => {
+        // console.log(apiRef.current.state.columns.lookup[col.id]?.width);
+        return {
+          field: col.id,
+          headerName: col.label,
+          width: apiRef.current.state.columns.lookup[col.id]?.width || 150,
+          sortable: true,
+          filterable: true,
+          resizable: true,
+          expand: col.id === "message" ? true : false,
+          renderCell: (params) => renderCell(col.id, params.value),
+          hide: columnVisibility[col.field] === false,
+        };
+      });
       setColumns(gridColumns);
     });
-  }, [pinnedColumns, parser]);
+  }, [parser]);
 
   const scrollToBottom = useCallback(() => {
     if (!autoScroll || !gridContainerRef.current) return;
@@ -166,6 +170,19 @@ const ViewerPage = ({ project }) => {
         lastAddedLogRef.current = currentLastRow;
         setTimeout(scrollToBottom, 100);
       }
+    }
+
+    // Auto-size columns when we get the first log
+    if (logs.length === 1 && apiRef.current) {
+      setTimeout(() => {
+        try {
+          apiRef.current.autosizeColumns({
+            expand: true,
+          });
+        } catch (e) {
+          console.error("Error auto-sizing columns:", e);
+        }
+      }, 200); // Small delay to ensure the grid is properly rendered
     }
   }, [logs, autoScroll, scrollToBottom]);
 
@@ -576,6 +593,7 @@ const ViewerPage = ({ project }) => {
             density={densityLevel}
             disableRowSelectionOnClick
             loading={loading}
+            apiRef={apiRef}
             getRowClassName={(params) => {
               if (params.row.level) {
                 const level = params.row.level.toLowerCase();
