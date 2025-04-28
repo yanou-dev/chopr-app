@@ -143,7 +143,6 @@ const ViewerPage = ({ project }) => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
-  const [pageSize, setPageSize] = useState(100);
   const [pinnedColumns, setPinnedColumns] = useState({});
   const [fontSize, setFontSize] = useState(12);
   const [densityLevel, setDensityLevel] = useState("standard");
@@ -221,7 +220,7 @@ const ViewerPage = ({ project }) => {
   useEffect(() => {
     if (autoScroll && logs.length > 0) {
       // Scroll to the bottom when new logs are added
-      const gridApi = dataGridRef.current?.apiRef;
+      const gridApi = dataGridRef.current?.apiRef?.current;
       if (gridApi) {
         setTimeout(() => {
           gridApi.scrollToIndexes({
@@ -732,9 +731,6 @@ const ViewerPage = ({ project }) => {
             ref={dataGridRef}
             rows={getDataGridRows()}
             columns={getDataGridColumns()}
-            pageSize={pageSize}
-            rowsPerPageOptions={[25, 50, 100, 250, 500]}
-            onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
             density={densityLevel}
             disableSelectionOnClick
             loading={loading}
@@ -775,6 +771,9 @@ const ViewerPage = ({ project }) => {
               },
               "& .MuiDataGrid-columnHeader": {
                 fontSize: `${fontSize}px`,
+              },
+              "& .MuiDataGrid-footerContainer": {
+                display: "none", // Cache complètement le footer de pagination
               },
             }}
             slots={{
@@ -955,13 +954,7 @@ const ViewerPage = ({ project }) => {
 
       <Box
         sx={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
           p: 1,
-          borderTop: "1px solid",
-          borderColor: "divider",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",

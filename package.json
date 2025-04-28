@@ -13,7 +13,8 @@
     "eject": "react-scripts eject",
     "electron:build": "npm run build && electron-builder",
     "pack": "electron-builder --dir",
-    "dist": "npm run build && electron-builder"
+    "dist": "npm run build && electron-builder",
+    "postinstall": "patch-package"
   },
   "build": {
     "appId": "dev.yanou.Chopr",
@@ -74,6 +75,8 @@
     "electron": "^25.3.0",
     "electron-builder": "^24.4.0",
     "jest": "^27.5.1",
+    "patch-package": "^8.0.0",
+    "postinstall-postinstall": "^2.1.0",
     "react-app-rewired": "^2.2.1"
   },
   "browserslist": {
