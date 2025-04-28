@@ -1,0 +1,65 @@
+diff --git a/node_modules/@mui/x-data-grid/hooks/features/pagination/gridPaginationUtils.js b/node_modules/@mui/x-data-grid/hooks/features/pagination/gridPaginationUtils.js
+index ed37243..0e97414 100644
+--- a/node_modules/@mui/x-data-grid/hooks/features/pagination/gridPaginationUtils.js
++++ b/node_modules/@mui/x-data-grid/hooks/features/pagination/gridPaginationUtils.js
+@@ -20,7 +20,7 @@ export const getValidPage = (page, pageCount = 0) => {
+   return Math.max(Math.min(page, pageCount - 1), 0);
+ };
+ export const throwIfPageSizeExceedsTheLimit = (pageSize, signatureProp) => {
+-  if (signatureProp === GridSignature.DataGrid && pageSize > MAX_PAGE_SIZE) {
+-    throw new Error(['MUI: `pageSize` cannot exceed 100 in the MIT version of the DataGrid.', 'You need to upgrade to DataGridPro or DataGridPremium component to unlock this feature.'].join('\n'));
+-  }
++  // if (signatureProp === GridSignature.DataGrid && pageSize > MAX_PAGE_SIZE) {
++  //   throw new Error(['MUI: `pageSize` cannot exceed 100 in the MIT version of the DataGrid.', 'You need to upgrade to DataGridPro or DataGridPremium component to unlock this feature.'].join('\n'));
++  // }
+ };
+\ No newline at end of file
+diff --git a/node_modules/@mui/x-data-grid/legacy/hooks/features/pagination/gridPaginationUtils.js b/node_modules/@mui/x-data-grid/legacy/hooks/features/pagination/gridPaginationUtils.js
+index 24c38c6..7147368 100644
+--- a/node_modules/@mui/x-data-grid/legacy/hooks/features/pagination/gridPaginationUtils.js
++++ b/node_modules/@mui/x-data-grid/legacy/hooks/features/pagination/gridPaginationUtils.js
+@@ -25,7 +25,7 @@ export var getValidPage = function getValidPage(page) {
+   return Math.max(Math.min(page, pageCount - 1), 0);
+ };
+ export var throwIfPageSizeExceedsTheLimit = function throwIfPageSizeExceedsTheLimit(pageSize, signatureProp) {
+-  if (signatureProp === GridSignature.DataGrid && pageSize > MAX_PAGE_SIZE) {
+-    throw new Error(['MUI: `pageSize` cannot exceed 100 in the MIT version of the DataGrid.', 'You need to upgrade to DataGridPro or DataGridPremium component to unlock this feature.'].join('\n'));
+-  }
++  // if (signatureProp === GridSignature.DataGrid && pageSize > MAX_PAGE_SIZE) {
++  //   throw new Error(['MUI: `pageSize` cannot exceed 100 in the MIT version of the DataGrid.', 'You need to upgrade to DataGridPro or DataGridPremium component to unlock this feature.'].join('\n'));
++  // }
+ };
+\ No newline at end of file
+diff --git a/node_modules/@mui/x-data-grid/modern/hooks/features/pagination/gridPaginationUtils.js b/node_modules/@mui/x-data-grid/modern/hooks/features/pagination/gridPaginationUtils.js
+index ed37243..0e97414 100644
+--- a/node_modules/@mui/x-data-grid/modern/hooks/features/pagination/gridPaginationUtils.js
++++ b/node_modules/@mui/x-data-grid/modern/hooks/features/pagination/gridPaginationUtils.js
+@@ -20,7 +20,7 @@ export const getValidPage = (page, pageCount = 0) => {
+   return Math.max(Math.min(page, pageCount - 1), 0);
+ };
+ export const throwIfPageSizeExceedsTheLimit = (pageSize, signatureProp) => {
+-  if (signatureProp === GridSignature.DataGrid && pageSize > MAX_PAGE_SIZE) {
+-    throw new Error(['MUI: `pageSize` cannot exceed 100 in the MIT version of the DataGrid.', 'You need to upgrade to DataGridPro or DataGridPremium component to unlock this feature.'].join('\n'));
+-  }
++  // if (signatureProp === GridSignature.DataGrid && pageSize > MAX_PAGE_SIZE) {
++  //   throw new Error(['MUI: `pageSize` cannot exceed 100 in the MIT version of the DataGrid.', 'You need to upgrade to DataGridPro or DataGridPremium component to unlock this feature.'].join('\n'));
++  // }
+ };
+\ No newline at end of file
+diff --git a/node_modules/@mui/x-data-grid/node/hooks/features/pagination/gridPaginationUtils.js b/node_modules/@mui/x-data-grid/node/hooks/features/pagination/gridPaginationUtils.js
+index 603eaa6..2f2b8c0 100644
+--- a/node_modules/@mui/x-data-grid/node/hooks/features/pagination/gridPaginationUtils.js
++++ b/node_modules/@mui/x-data-grid/node/hooks/features/pagination/gridPaginationUtils.js
+@@ -30,8 +30,8 @@ const getValidPage = (page, pageCount = 0) => {
+ };
+ exports.getValidPage = getValidPage;
+ const throwIfPageSizeExceedsTheLimit = (pageSize, signatureProp) => {
+-  if (signatureProp === _utils.GridSignature.DataGrid && pageSize > MAX_PAGE_SIZE) {
+-    throw new Error(['MUI: `pageSize` cannot exceed 100 in the MIT version of the DataGrid.', 'You need to upgrade to DataGridPro or DataGridPremium component to unlock this feature.'].join('\n'));
+-  }
++  // if (signatureProp === _utils.GridSignature.DataGrid && pageSize > MAX_PAGE_SIZE) {
++  //   throw new Error(['MUI: `pageSize` cannot exceed 100 in the MIT version of the DataGrid.', 'You need to upgrade to DataGridPro or DataGridPremium component to unlock this feature.'].join('\n'));
++  // }
+ };
+ exports.throwIfPageSizeExceedsTheLimit = throwIfPageSizeExceedsTheLimit;
+\ No newline at end of file

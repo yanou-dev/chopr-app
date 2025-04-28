@@ -39,38 +39,31 @@ import {
 } from "@mui/x-data-grid";
 import HomeIcon from "@mui/icons-material/Home";
 import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
-import RefreshIcon from "@mui/icons-material/Refresh";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import TitleBar from "../components/TitleBar";
 import LogParser from "../parsers/LogParser";
 import JSONParser from "../parsers/JSONParser";
 
-const CustomToolbar = (props) => {
-  const {
-    setFilter,
-    filter,
-    handleClearLogs,
-    autoScroll,
-    setAutoScroll,
-    handleGoHome,
-    scrollToBottom,
-  } = props;
-
+const CustomToolbar = ({
+  setFilter,
+  filter,
+  handleClearLogs,
+  autoScroll,
+  setAutoScroll,
+  handleGoHome,
+  scrollToBottom,
+}) => {
   return (
     <GridToolbarContainer
       sx={{
         justifyContent: "space-between",
         px: 1,
+        py: 1,
         borderBottom: "1px solid",
         borderColor: "divider",
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center" }}>
-        <Tooltip title="Back to Home">
-          <IconButton onClick={handleGoHome} size="small">
-            <HomeIcon />
-          </IconButton>
-        </Tooltip>
         <GridToolbarColumnsButton />
         <GridToolbarFilterButton />
         <GridToolbarDensitySelector />
@@ -86,7 +79,6 @@ const CustomToolbar = (props) => {
             onClick={() => {
               const newAutoScrollState = !autoScroll;
               setAutoScroll(newAutoScrollState);
-              // Si on active l'auto-scroll, forcer immédiatement un scroll vers le bas
               if (newAutoScrollState) {
                 setTimeout(scrollToBottom, 0);
               }
@@ -105,7 +97,6 @@ const CustomToolbar = (props) => {
       <Box sx={{ display: "flex", alignItems: "center", width: "40%" }}>
         <GridToolbarQuickFilter
           quickFilterParser={(searchInput) => {
-            // Sync the GridToolbar's quick filter with our custom filter state
             setFilter(searchInput);
             return searchInput.split(" ");
           }}
@@ -114,9 +105,7 @@ const CustomToolbar = (props) => {
         />
       </Box>
 
-      <Box sx={{ display: "flex", alignItems: "center" }}>
-        {/* Espace réservé pour équilibrer la barre d'outils */}
-      </Box>
+      <Box sx={{ display: "flex", alignItems: "center" }} />
     </GridToolbarContainer>
   );
 };
@@ -129,14 +118,13 @@ const ViewerPage = ({ project }) => {
       ? new JSONParser()
       : new LogParser(project.parser.type);
 
+  // State variables
   const [logs, setLogs] = useState([]);
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState("");
   const [levelFilter, setLevelFilter] = useState("all");
-  const [anchorEl, setAnchorEl] = useState(null);
   const [commandId, setCommandId] = useState(null);
-  const [searchSuggestions, setSearchSuggestions] = useState([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [columnVisibility, setColumnVisibility] = useState({});
@@ -147,7 +135,7 @@ const ViewerPage = ({ project }) => {
   const [fontSize, setFontSize] = useState(12);
   const [densityLevel, setDensityLevel] = useState("standard");
 
-  // Références pour l'auto-scroll
+  // References for auto-scroll
   const gridContainerRef = useRef(null);
   const lastAddedLogRef = useRef(null);
 
@@ -166,72 +154,32 @@ const ViewerPage = ({ project }) => {
       }));
       setColumns(gridColumns);
     });
-  }, [pinnedColumns]);
+  }, [pinnedColumns, parser]);
 
-  // Fonction d'auto-scroll
   const scrollToBottom = useCallback(() => {
     if (!autoScroll || !gridContainerRef.current) return;
 
-    // Accéder à l'élément DOM qui contient le contenu scrollable
     const scrollableDiv = gridContainerRef.current.querySelector(
       ".MuiDataGrid-virtualScroller"
     );
 
     if (scrollableDiv) {
-      // Scroll jusqu'en bas avec une animation douce
       scrollableDiv.scrollTo({
         top: scrollableDiv.scrollHeight,
       });
     }
   }, [autoScroll]);
 
-  // Effet pour déclencher l'auto-scroll quand de nouveaux logs sont ajoutés
   useEffect(() => {
     if (autoScroll && logs.length > 0) {
-      // On garde une référence de l'ID de la dernière ligne
       const currentLastRow = logs[logs.length - 1].id;
 
-      // On ne scrolle que si une nouvelle ligne a été ajoutée
       if (currentLastRow !== lastAddedLogRef.current) {
         lastAddedLogRef.current = currentLastRow;
-
-        // Utiliser un délai pour s'assurer que le DOM est mis à jour
         setTimeout(scrollToBottom, 100);
       }
     }
   }, [logs, autoScroll, scrollToBottom]);
-
-  const generateSearchSuggestions = (logs) => {
-    const suggestions = new Set();
-    const origColumns = parser.getColumns();
-
-    origColumns.forEach((column) => {
-      if (!["message", "rawLog", "id"].includes(column.id)) {
-        suggestions.add(`${column.id}:`);
-      }
-    });
-
-    if (logs.length > 0) {
-      logs.forEach((log) => {
-        origColumns.forEach((column) => {
-          const value = log[column.id];
-          if (
-            value &&
-            typeof value === "string" &&
-            !["message", "rawLog", "id"].includes(column.id)
-          ) {
-            suggestions.add(`${column.id}:"${value}"`);
-          }
-        });
-      });
-    }
-
-    return Array.from(suggestions);
-  };
-
-  useEffect(() => {
-    setSearchSuggestions(generateSearchSuggestions(logs));
-  }, [logs]);
 
   useEffect(() => {
     if (!project) {
@@ -249,7 +197,9 @@ const ViewerPage = ({ project }) => {
   }, [project, navigate]);
 
   useEffect(() => {
-    setLogs([]);
+    if (project?.id) {
+      setLogs([]);
+    }
   }, [project?.id]);
 
   const addLogEntry = (logEntry) => {
@@ -262,7 +212,6 @@ const ViewerPage = ({ project }) => {
         return prevLogs;
       }
 
-      // Garder un maximum de 10,000 logs pour éviter les problèmes de performance
       const newLogs = [...prevLogs, logEntry];
       if (newLogs.length > 10000) {
         return newLogs.slice(newLogs.length - 10000);
@@ -277,11 +226,13 @@ const ViewerPage = ({ project }) => {
     try {
       const id = `${project.source.type}-${Date.now()}`;
       setCommandId(id);
+
       if (project.source.type === "command") {
         await window.electron.startCommand(id, project.source.value);
       } else if (project.source.type === "file") {
         await window.electron.watchFile(id, project.source.value);
       }
+
       const unsubscribe = window.electron.onCommandOutput((data) => {
         if (data.id === id) {
           if (!data.data || data.data.trim() === "") return;
@@ -312,22 +263,6 @@ const ViewerPage = ({ project }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleFilterChange = (e) => {
-    setFilter(e.target.value);
-  };
-
-  const handleLevelFilterChange = (e) => {
-    setLevelFilter(e.target.value);
-  };
-
-  const handleMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
   };
 
   const handleClearLogs = () => {
@@ -446,30 +381,6 @@ const ViewerPage = ({ project }) => {
     }
   };
 
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return "";
-
-    if (/^\d{2}:\d{2}:\d{2}/.test(timestamp)) {
-      return timestamp;
-    }
-
-    try {
-      const date = new Date(timestamp);
-      if (isNaN(date.getTime())) {
-        return timestamp;
-      }
-
-      return date.toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      });
-    } catch (e) {
-      return timestamp;
-    }
-  };
-
   // Parse search query
   const parseSearchQuery = (query) => {
     const filters = {};
@@ -525,11 +436,89 @@ const ViewerPage = ({ project }) => {
     );
   };
 
-  // Check if a time range filter is active
-  const isRangeFilterActive = (filterType) => {
-    const { timeRangeFilters } = parseSearchQuery(filter);
-    const baseKey = filterType.toLowerCase().replace(/_from$|_to$/, "");
-    return timeRangeFilters[baseKey] !== undefined;
+  const getLevelColor = (level) => {
+    if (!level) return "default";
+
+    switch (level.toLowerCase()) {
+      case "error":
+      case "fatal":
+      case "severe":
+        return "error";
+      case "warn":
+      case "warning":
+        return "warning";
+      case "info":
+        return "info";
+      case "debug":
+      case "trace":
+        return "success";
+      default:
+        return "default";
+    }
+  };
+
+  const renderCell = (columnId, value) => {
+    if (columnId === "level" && value) {
+      return (
+        <Chip
+          label={value}
+          size="small"
+          color={getLevelColor(value)}
+          sx={{
+            textTransform: "capitalize",
+            fontWeight: value.toLowerCase() === "error" ? "bold" : "normal",
+            fontSize: `${fontSize}px`,
+          }}
+        />
+      );
+    }
+
+    if (typeof value === "string" && columnId === "message") {
+      return (
+        <Typography
+          variant="body2"
+          sx={{
+            fontFamily: "monospace",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            fontSize: `${fontSize}px`,
+          }}
+        >
+          {value}
+        </Typography>
+      );
+    }
+
+    return (
+      <Typography
+        variant="body2"
+        sx={{
+          fontFamily: "monospace",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          fontSize: `${fontSize}px`,
+        }}
+      >
+        {value}
+      </Typography>
+    );
+  };
+
+  const toggleFilter = (filterType, filterValue) => {
+    const filterString = `${filterType}:"${filterValue}"`;
+    const currentFilters = filter.split(" ").filter((f) => f.trim() !== "");
+    const filterIndex = currentFilters.findIndex(
+      (f) => f.toLowerCase() === filterString.toLowerCase()
+    );
+
+    if (filterIndex >= 0) {
+      currentFilters.splice(filterIndex, 1);
+    } else {
+      currentFilters.push(filterString);
+    }
+
+    setFilter(currentFilters.join(" "));
   };
 
   const filteredLogs = useMemo(() => {
@@ -610,115 +599,6 @@ const ViewerPage = ({ project }) => {
     });
   }, [logs, filter, levelFilter]);
 
-  const getLevelColor = (level) => {
-    if (!level) return "default";
-
-    switch (level.toLowerCase()) {
-      case "error":
-      case "fatal":
-      case "severe":
-        return "error";
-      case "warn":
-      case "warning":
-        return "warning";
-      case "info":
-        return "info";
-      case "debug":
-      case "trace":
-        return "success";
-      default:
-        return "default";
-    }
-  };
-
-  const renderCell = (columnId, value) => {
-    if (columnId === "level" && value) {
-      return (
-        <Chip
-          label={value}
-          size="small"
-          color={getLevelColor(value)}
-          sx={{
-            textTransform: "capitalize",
-            fontWeight: value.toLowerCase() === "error" ? "bold" : "normal",
-            fontSize: `${fontSize}px`,
-          }}
-        />
-      );
-    }
-
-    if (typeof value === "string" && columnId === "message") {
-      return (
-        <Typography
-          variant="body2"
-          sx={{
-            fontFamily: "monospace",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-            fontSize: `${fontSize}px`,
-          }}
-        >
-          {value}
-        </Typography>
-      );
-    }
-
-    return (
-      <Typography
-        variant="body2"
-        sx={{
-          fontFamily: "monospace",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          fontSize: `${fontSize}px`,
-        }}
-      >
-        {value}
-      </Typography>
-    );
-  };
-
-  const toggleFilter = (filterType, filterValue) => {
-    const filterString = `${filterType}:"${filterValue}"`;
-
-    const currentFilters = filter.split(" ").filter((f) => f.trim() !== "");
-
-    const filterIndex = currentFilters.findIndex(
-      (f) => f.toLowerCase() === filterString.toLowerCase()
-    );
-
-    if (filterIndex >= 0) {
-      currentFilters.splice(filterIndex, 1);
-    } else {
-      currentFilters.push(filterString);
-    }
-
-    setFilter(currentFilters.join(" "));
-  };
-
-  const setRangeFilter = (filterType, value) => {
-    const currentFilters = filter.split(" ").filter((f) => f.trim() !== "");
-
-    const filterIndex = currentFilters.findIndex((f) =>
-      f.toLowerCase().startsWith(`${filterType.toLowerCase()}:`)
-    );
-
-    const filterString = value ? `${filterType}:${value}` : "";
-
-    if (filterIndex >= 0) {
-      if (value) {
-        currentFilters[filterIndex] = filterString;
-      } else {
-        currentFilters.splice(filterIndex, 1);
-      }
-    } else if (value) {
-      currentFilters.push(filterString);
-    }
-
-    setFilter(currentFilters.join(" "));
-  };
-
   const getDataGridRows = () => {
     return filteredLogs.map((log, index) => ({
       ...log,
@@ -745,7 +625,6 @@ const ViewerPage = ({ project }) => {
       <TitleBar title={project?.name || "Chopr"} />
 
       <Box sx={{ display: "flex", flexGrow: 1, overflow: "hidden" }}>
-        {/* DataGrid - Main log display */}
         <Box
           ref={gridContainerRef}
           sx={{ flexGrow: 1, overflow: "hidden", position: "relative" }}
@@ -795,7 +674,7 @@ const ViewerPage = ({ project }) => {
                 fontSize: `${fontSize}px`,
               },
               "& .MuiDataGrid-footerContainer": {
-                display: "none", // Cache complètement le footer de pagination
+                display: "none",
               },
             }}
             slots={{
@@ -819,10 +698,9 @@ const ViewerPage = ({ project }) => {
                 sortModel: [],
               },
               pagination: {
-                paginationModel: { pageSize: 100 },
+                paginationModel: { pageSize: Number.MAX_VALUE },
               },
             }}
-            pageSizeOptions={[100]}
             paginationMode="client"
           />
         </Box>
