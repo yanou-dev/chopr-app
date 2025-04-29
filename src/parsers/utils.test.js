@@ -15,6 +15,13 @@ const logExamples = {
     "2023-12-05 14:28:37.321 DEBUG [app-initializer] org.example.config.DatabaseConfig - Connected to database v10.5.3 with 8 active connections",
     "2023-11-11 03:45:12.654 FATAL [main] org.example.Application - Application failed to start: No configuration file found at path /etc/app/config.yml",
   ],
+  logback: [
+    "2025-04-29 00:40:52.538 TRACE o.a.c.c.file.remote.SftpConsumer - SftpFile[fileName=archive, longName=drwxrwxr-x    2 hr_decathlonevents sftpusers    40960 Apr 28 23:58 archive, dir=true]",
+    "2025-04-29 00:40:52.538 DEBUG o.a.c.c.file.GenericFileConsumer - Took 84ms to poll: ",
+    "2025-04-29 00:40:52.538 TRACE o.a.c.c.f.remote.RemoteFileConsumer - postPollCheck on sftp://HR_decathlonevents@62.168.45.122:22",
+    "2025-04-29 00:40:52.942 WARN  o.a.c.c.f.r.s.SftpChangedExclusiveReadLockStrategy - Cannot acquire read lock within 20000 millis. Will skip the file: RemoteFile[tracking_523_20250429_012017_20250429024007.csv]",
+    "2025-04-29 00:40:52.942 DEBUG o.a.c.c.file.GenericFileConsumer - sftp://ftp.celeritastransporte.com:22/in/transporte/seg/?delay=60000&filterFile=%24simple%7Bfile%3Asize%7D+%3E+0&move=archive&password=xxxxxx&readLock=changed&readLockLoggingLevel=WARN&sortBy=file%3Amodified&username=xxxxxx cannot begin processing file: RemoteFile[tracking_523_20250429_012017_20250429024007.csv]",
+  ],
   nodejs: [
     "2023-06-18T14:32:10.123Z info: Server started on port 3000",
     "2023-09-22T09:15:45.456Z error: Failed to connect to database after 5 retries",

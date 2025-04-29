@@ -84,18 +84,6 @@ const CustomToolbar = (props) => {
           </IconButton>
         </Tooltip>
       </Box>
-
-      <Box sx={{ display: "flex", alignItems: "center", width: "40%" }}>
-        <GridToolbarQuickFilter
-          onChange={(event) => setFilter(event.target.value)}
-          value={filter}
-          variant="outlined"
-          size="small"
-          fullWidth
-          sx={{ m: 0 }}
-        />
-      </Box>
-
       <Box sx={{ display: "flex", alignItems: "center" }} />
     </GridToolbarContainer>
   );
@@ -420,20 +408,22 @@ const ViewerPage = ({ project }) => {
     if (!level) return "default";
 
     switch (level.toLowerCase()) {
-      case "error":
       case "fatal":
       case "severe":
-        return "error";
+        return "error"; // Rouge vif pour les erreurs critiques
+      case "error":
+        return "error"; // Rouge pour les erreurs
       case "warn":
       case "warning":
-        return "warning";
+        return "warning"; // Jaune/orange pour les avertissements
       case "info":
-        return "info";
+        return "info"; // Bleu pour les informations
       case "debug":
+        return "primary"; // Bleu primaire pour le débogage (plus distinct)
       case "trace":
-        return "success";
+        return "secondary"; // Violet/gris pour les traces (moins prioritaire)
       default:
-        return "default";
+        return "default"; // Gris neutre pour les cas non définis
     }
   };
 
@@ -628,7 +618,8 @@ const ViewerPage = ({ project }) => {
               "& .MuiDataGrid-cell": {
                 fontSize: `${fontSize}px`,
                 fontFamily: "monospace",
-                padding: "6px 16px",
+                display: "flex",
+                alignItems: "center",
               },
               "& .MuiDataGrid-columnHeader": {
                 fontSize: `${fontSize}px`,

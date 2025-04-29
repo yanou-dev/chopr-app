@@ -320,7 +320,7 @@ ipcMain.handle("watch-file", async (event, { id, filePath }) => {
     const tailCommand =
       process.platform === "win32"
         ? `powershell -Command "Get-Content -Path '${filePath}' -Wait"`
-        : `tail -f "${filePath}"`;
+        : `tail +1f "${filePath}"`;
 
     return startCommand(id, tailCommand);
   } catch (error) {
