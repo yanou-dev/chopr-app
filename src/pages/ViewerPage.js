@@ -261,13 +261,6 @@ const ViewerPage = ({ project }) => {
     showSnackbar("Logs cleared");
   };
 
-  const handleGoHome = () => {
-    if (commandId) {
-      window.electron.stopCommand(commandId);
-    }
-    navigate("/");
-  };
-
   const showSnackbar = (message) => {
     setSnackbarMessage(message);
     setSnackbarOpen(true);

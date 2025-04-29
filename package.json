@@ -2,7 +2,7 @@
   "name": "chopr",
   "version": "1.0.0",
   "description": "A modern desktop application for visualizing logs from various sources",
-  "main": "main.js",
+  "main": "public/electron.js",
   "homepage": "./",
   "scripts": {
     "start": "electron .",
@@ -19,39 +19,12 @@
   "build": {
     "appId": "dev.yanou.Chopr",
     "productName": "Chopr",
-    "copyright": "Copyright © 2025",
     "files": [
-      "build/**/*",
-      "main.js",
-      "preload.js",
-      "node_modules/**/*",
-      "package.json"
+      "!node_modules"
     ],
-    "extraMetadata": {
-      "main": "main.js"
-    },
-    "mac": {
-      "category": "public.app-category.developer-tools",
-      "target": "dmg"
-    },
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Development"
-    },
     "directories": {
-      "buildResources": "assets",
       "output": "dist"
-    },
-    "publish": null
+    }
   },
   "author": "",
   "license": "MIT",
