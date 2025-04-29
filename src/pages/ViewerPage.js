@@ -21,13 +21,12 @@ import {
   Snackbar,
 } from "@mui/material";
 import {
-  DataGrid,
+  DataGridPro,
   GridToolbarContainer,
   GridToolbarColumnsButton,
   GridToolbarFilterButton,
   GridToolbarDensitySelector,
-  GridToolbarQuickFilter,
-} from "@mui/x-data-grid";
+} from "@mui/x-data-grid-pro";
 import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import TitleBar from "../components/TitleBar";
@@ -35,14 +34,7 @@ import LogParser from "../parsers/LogParser";
 import JSONParser from "../parsers/JSONParser";
 
 const CustomToolbar = (props) => {
-  const {
-    setFilter,
-    filter,
-    handleClearLogs,
-    autoScroll,
-    setAutoScroll,
-    scrollToBottom,
-  } = props;
+  const { handleClearLogs, autoScroll, setAutoScroll, scrollToBottom } = props;
 
   return (
     <GridToolbarContainer
@@ -100,7 +92,6 @@ const ViewerPage = ({ project }) => {
   const [logs, setLogs] = useState([]);
   const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState("");
   const [levelFilter, setLevelFilter] = useState("all");
   const [commandId, setCommandId] = useState(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -111,6 +102,9 @@ const ViewerPage = ({ project }) => {
   const [pinnedColumns, setPinnedColumns] = useState({});
   const [fontSize, setFontSize] = useState(12);
   const [densityLevel, setDensityLevel] = useState("compact");
+  const [filterModel, setFilterModel] = useState({
+    items: [],
+  });
 
   const gridContainerRef = useRef(null);
   const lastAddedLogRef = useRef(null);
@@ -119,22 +113,21 @@ const ViewerPage = ({ project }) => {
   useEffect(() => {
     parser.on("columnsChanged", (newColumns) => {
       const gridColumns = newColumns.map((col) => {
-        // console.log(apiRef.current.state.columns.lookup[col.id]?.width);
         return {
           field: col.id,
           headerName: col.label,
-          width: apiRef.current.state.columns.lookup[col.id]?.width || 150,
+          width: apiRef.current?.state?.columns?.lookup?.[col.id]?.width || 150,
           sortable: true,
           filterable: true,
           resizable: true,
-          expand: col.id === "message" ? true : false,
+          flex: col.id === "message" ? 1 : 0,
           renderCell: (params) => renderCell(col.id, params.value),
           hide: columnVisibility[col.field] === false,
         };
       });
       setColumns(gridColumns);
     });
-  }, [parser]);
+  }, [parser, columnVisibility]);
 
   const scrollToBottom = useCallback(() => {
     if (!autoScroll || !gridContainerRef.current) return;
@@ -284,126 +277,6 @@ const ViewerPage = ({ project }) => {
     setSnackbarOpen(false);
   };
 
-  const parseDate = (dateStr) => {
-    if (!dateStr) return NaN;
-
-    if (!isNaN(Number(dateStr))) {
-      return Number(dateStr);
-    }
-
-    try {
-      let timestamp = new Date(dateStr).getTime();
-      if (!isNaN(timestamp)) return timestamp;
-
-      const europeanMatch = dateStr.match(
-        /(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})\s*(\d{1,2})?:?(\d{1,2})?:?(\d{1,2})?/
-      );
-      if (europeanMatch) {
-        const [_, day, month, year, hours = 0, minutes = 0, seconds = 0] =
-          europeanMatch;
-        timestamp = new Date(
-          year,
-          month - 1,
-          day,
-          hours,
-          minutes,
-          seconds
-        ).getTime();
-        if (!isNaN(timestamp)) return timestamp;
-      }
-
-      const americanMatch = dateStr.match(
-        /(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})\s*(\d{1,2})?:?(\d{1,2})?:?(\d{1,2})?/
-      );
-      if (americanMatch) {
-        const [_, month, day, year, hours = 0, minutes = 0, seconds = 0] =
-          americanMatch;
-        timestamp = new Date(
-          year,
-          month - 1,
-          day,
-          hours,
-          minutes,
-          seconds
-        ).getTime();
-        if (!isNaN(timestamp)) return timestamp;
-      }
-
-      const timeMatch = dateStr.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
-      if (timeMatch) {
-        const [_, hours, minutes, seconds = 0] = timeMatch;
-        const today = new Date();
-        timestamp = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate(),
-          hours,
-          minutes,
-          seconds
-        ).getTime();
-        if (!isNaN(timestamp)) return timestamp;
-      }
-
-      const log4jMatch = dateStr.match(
-        /(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2}:\d{2}(?:\.\d{1,3})?)/
-      );
-      if (log4jMatch) {
-        const [_, datePart, timePart] = log4jMatch;
-        timestamp = new Date(`${datePart}T${timePart}`).getTime();
-        if (!isNaN(timestamp)) return timestamp;
-      }
-
-      return NaN;
-    } catch (e) {
-      console.error("Error parsing date:", e);
-      return NaN;
-    }
-  };
-
-  // Parse search query
-  const parseSearchQuery = (query) => {
-    const filters = {};
-    const timeRangeFilters = {};
-    const parts = query.split(" ");
-
-    let textFilter = "";
-
-    parts.forEach((part) => {
-      if (part.includes(":")) {
-        let [key, ...valueParts] = part.split(":");
-        let value = valueParts.join(":");
-
-        if (value.startsWith('"') && value.endsWith('"')) {
-          value = value.substring(1, value.length - 1);
-        }
-
-        const keyLower = key.toLowerCase();
-
-        if (keyLower.endsWith("_from") || keyLower.endsWith("_to")) {
-          const baseKey = keyLower.replace(/_from$|_to$/, "");
-          if (!timeRangeFilters[baseKey]) {
-            timeRangeFilters[baseKey] = {};
-          }
-
-          if (keyLower.endsWith("_from")) {
-            timeRangeFilters[baseKey].from = value;
-          } else {
-            timeRangeFilters[baseKey].to = value;
-          }
-        } else {
-          if (!filters[keyLower]) {
-            filters[keyLower] = [];
-          }
-          filters[keyLower].push(value.toLowerCase());
-        }
-      } else {
-        textFilter += (textFilter ? " " : "") + part;
-      }
-    });
-
-    return { filters, timeRangeFilters, textFilter };
-  };
-
   const getLevelColor = (level) => {
     if (!level) return "default";
 
@@ -449,9 +322,10 @@ const ViewerPage = ({ project }) => {
           variant="body2"
           sx={{
             fontFamily: "monospace",
-            whiteSpace: "pre-wrap",
             wordBreak: "break-word",
             fontSize: `${fontSize}px`,
+            textOverflow: "ellipsis",
+            overflow: "hidden",
           }}
         >
           {value}
@@ -476,7 +350,13 @@ const ViewerPage = ({ project }) => {
   };
 
   const filteredLogs = useMemo(() => {
+    // If no filters are active, return all logs
+    if (filterModel.items.length === 0 && levelFilter === "all") {
+      return logs;
+    }
+
     return logs.filter((log) => {
+      // Apply level filter
       if (
         levelFilter !== "all" &&
         log.level &&
@@ -485,79 +365,56 @@ const ViewerPage = ({ project }) => {
         return false;
       }
 
-      if (!filter) return true;
+      // Apply column filters from the filter model
+      for (const filterItem of filterModel.items) {
+        const { field, operator, value } = filterItem;
 
-      const { filters, timeRangeFilters, textFilter } =
-        parseSearchQuery(filter);
-
-      for (const [key, values] of Object.entries(filters)) {
-        if (log[key] !== undefined) {
-          const logValue = String(log[key]).toLowerCase();
-
-          const matchesAnyValue = values.some((value) => {
-            if (value.includes("*")) {
-              const regexPattern = value.replace(/\*/g, ".*");
-              const regex = new RegExp(`^${regexPattern}$`);
-              return regex.test(logValue);
-            } else {
-              return logValue === value;
-            }
-          });
-
-          if (!matchesAnyValue) {
-            return false;
-          }
+        // Skip if the log doesn't have this field or the value is undefined
+        if (log[field] === undefined) {
+          return false;
         }
-      }
 
-      for (const [key, range] of Object.entries(timeRangeFilters)) {
-        if (log[key]) {
-          const logValue = log[key];
-          let logTimestamp;
+        const logValue = String(log[field]).toLowerCase();
+        const filterValue = value?.toLowerCase() || "";
 
-          try {
-            logTimestamp = parseDate(logValue);
-
-            if (isNaN(logTimestamp)) {
-              continue;
-            }
-
-            if (range.from) {
-              const fromTimestamp = parseDate(range.from);
-              if (!isNaN(fromTimestamp) && logTimestamp < fromTimestamp) {
-                return false;
-              }
-            }
-
-            if (range.to) {
-              const toTimestamp = parseDate(range.to);
-              if (!isNaN(toTimestamp) && logTimestamp > toTimestamp) {
-                return false;
-              }
-            }
-          } catch (e) {
-            console.error(`Error filtering by time range for ${key}:`, e);
-          }
+        switch (operator) {
+          case "contains":
+            if (!logValue.includes(filterValue)) return false;
+            break;
+          case "equals":
+            if (logValue !== filterValue) return false;
+            break;
+          case "startsWith":
+            if (!logValue.startsWith(filterValue)) return false;
+            break;
+          case "endsWith":
+            if (!logValue.endsWith(filterValue)) return false;
+            break;
+          case "isEmpty":
+            if (logValue !== "") return false;
+            break;
+          case "isNotEmpty":
+            if (logValue === "") return false;
+            break;
+          default:
+            // Unknown operator - pass through
+            break;
         }
-      }
-
-      if (
-        textFilter &&
-        (!log.message ||
-          !log.message.toLowerCase().includes(textFilter.toLowerCase()))
-      ) {
-        return false;
       }
 
       return true;
     });
-  }, [logs, filter, levelFilter]);
+  }, [logs, filterModel, levelFilter]);
 
   const getDataGridRows = () => {
     return filteredLogs.map((log, index) => ({
       ...log,
       id: log.id || index.toString(),
     }));
+  };
+
+  const handleFilterModelChange = (newFilterModel) => {
+    setFilterModel(newFilterModel);
   };
 
   return (
@@ -576,7 +433,7 @@ const ViewerPage = ({ project }) => {
           ref={gridContainerRef}
           sx={{ flexGrow: 1, overflow: "hidden", position: "relative" }}
         >
-          <DataGrid
+          <DataGridPro
             showToolbar
             rows={getDataGridRows()}
             columns={columns}
@@ -584,6 +441,9 @@ const ViewerPage = ({ project }) => {
             disableRowSelectionOnClick
             loading={loading}
             apiRef={apiRef}
+            filterMode="server"
+            onFilterModelChange={handleFilterModelChange}
+            filterModel={filterModel}
             getRowClassName={(params) => {
               if (params.row.level) {
                 const level = params.row.level.toLowerCase();
@@ -633,8 +493,6 @@ const ViewerPage = ({ project }) => {
             }}
             slotProps={{
               toolbar: {
-                setFilter,
-                filter,
                 handleClearLogs,
                 autoScroll,
                 setAutoScroll,

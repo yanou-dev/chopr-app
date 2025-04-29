@@ -1,0 +1,27 @@
+diff --git a/node_modules/@mui/x-license/Watermark/Watermark.js b/node_modules/@mui/x-license/Watermark/Watermark.js
+index e28923c..6cf2bff 100644
+--- a/node_modules/@mui/x-license/Watermark/Watermark.js
++++ b/node_modules/@mui/x-license/Watermark/Watermark.js
+@@ -51,7 +51,7 @@ function Watermark(props) {
+       letterSpacing: 5,
+       fontSize: 24
+     },
+-    children: getLicenseErrorMessage(licenseStatus.status)
++    // children: getLicenseErrorMessage(licenseStatus.status)
+   });
+ }
+ const MemoizedWatermark = exports.Watermark = (0, _fastMemo.fastMemo)(Watermark);
+\ No newline at end of file
+diff --git a/node_modules/@mui/x-license/esm/Watermark/Watermark.js b/node_modules/@mui/x-license/esm/Watermark/Watermark.js
+index 00b48b3..969a139 100644
+--- a/node_modules/@mui/x-license/esm/Watermark/Watermark.js
++++ b/node_modules/@mui/x-license/esm/Watermark/Watermark.js
+@@ -44,7 +44,7 @@ function Watermark(props) {
+       letterSpacing: 5,
+       fontSize: 24
+     },
+-    children: getLicenseErrorMessage(licenseStatus.status)
++    // children: getLicenseErrorMessage(licenseStatus.status)
+   });
+ }
+ const MemoizedWatermark = fastMemo(Watermark);
