@@ -51,7 +51,6 @@ class JSONParser extends BaseParser {
         logsArray.push(data);
       } catch {}
     }
-    console.log("LOGS ARRAY :", logsArray);
     return logsArray;
   }
 }

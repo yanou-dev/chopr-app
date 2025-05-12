@@ -9,8 +9,6 @@ import { useNavigate } from "react-router-dom";
 import {
   Box,
   Chip,
-  IconButton,
-  Tooltip,
   Typography,
   Button,
   Dialog,
@@ -32,9 +30,32 @@ import ClearAllIcon from "@mui/icons-material/ClearAll";
 import TitleBar from "../components/TitleBar";
 import LogParser from "../parsers/LogParser";
 import JSONParser from "../parsers/JSONParser";
+import { useTranslation } from "../i18n/i18n";
+import { useTheme } from "../contexts/ThemeContext";
 
 const CustomToolbar = (props) => {
-  const { handleClearLogs, autoScroll, setAutoScroll, scrollToBottom } = props;
+  const {
+    handleClearLogs,
+    autoScroll,
+    setAutoScroll,
+    scrollToBottom,
+    setUserScrolled,
+    densityLevel,
+    setDensityLevel,
+    apiRef,
+  } = props;
+
+  const { t } = useTranslation();
+
+  // Gérer le changement de densité
+  const handleDensityChange = (newDensity) => {
+    setDensityLevel(newDensity);
+
+    // Forcer la mise à jour du composant DataGrid
+    if (apiRef.current) {
+      apiRef.current.setDensity(newDensity);
+    }
+  };
 
   return (
     <GridToolbarContainer
@@ -50,39 +71,42 @@ const CustomToolbar = (props) => {
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
         <GridToolbarColumnsButton />
         <GridToolbarFilterButton />
-        <GridToolbarDensitySelector />
-        <Tooltip title="Clear Logs">
-          <IconButton onClick={handleClearLogs} size="small">
-            <ClearAllIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip
-          title={autoScroll ? "Disable auto-scroll" : "Enable auto-scroll"}
-        >
-          <IconButton
-            onClick={() => {
-              const newAutoScrollState = !autoScroll;
-              setAutoScroll(newAutoScrollState);
-              if (newAutoScrollState) {
-                setTimeout(scrollToBottom, 0);
-              }
-            }}
-            size="small"
-            sx={{
-              color: autoScroll ? "primary.main" : "text.secondary",
-            }}
-          >
-            <VerticalAlignBottomIcon />
-          </IconButton>
-        </Tooltip>
+        <GridToolbarDensitySelector onChange={handleDensityChange} />
       </Box>
-      <Box sx={{ display: "flex", alignItems: "center" }} />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Button
+          variant="text"
+          size="small"
+          startIcon={<ClearAllIcon />}
+          onClick={handleClearLogs}
+        >
+          {t("clearLogsButton")}
+        </Button>
+        <Button
+          variant={autoScroll ? "contained" : "text"}
+          size="small"
+          startIcon={<VerticalAlignBottomIcon />}
+          onClick={() => {
+            const newAutoScrollState = !autoScroll;
+            setAutoScroll(newAutoScrollState);
+            if (newAutoScrollState) {
+              setUserScrolled(false);
+              setTimeout(scrollToBottom, 0);
+            }
+          }}
+          disableElevation
+        >
+          {autoScroll ? t("autoScrollEnabled") : t("autoScrollDisabled")}
+        </Button>
+      </Box>
     </GridToolbarContainer>
   );
 };
 
 const ViewerPage = ({ project }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { mode } = useTheme();
   const parser =
     project?.parser?.type === "json"
       ? new JSONParser()
@@ -105,6 +129,7 @@ const ViewerPage = ({ project }) => {
   const [filterModel, setFilterModel] = useState({
     items: [],
   });
+  const [userScrolled, setUserScrolled] = useState(false);
 
   const gridContainerRef = useRef(null);
   const lastAddedLogRef = useRef(null);
@@ -142,6 +167,45 @@ const ViewerPage = ({ project }) => {
       });
     }
   }, [autoScroll]);
+
+  // Nouveau gestionnaire d'événements de défilement
+  const handleScroll = useCallback(() => {
+    if (!gridContainerRef.current) return;
+
+    const scrollableDiv = gridContainerRef.current.querySelector(
+      ".MuiDataGrid-virtualScroller"
+    );
+
+    if (scrollableDiv) {
+      const isAtBottom =
+        Math.abs(
+          scrollableDiv.scrollHeight -
+            scrollableDiv.clientHeight -
+            scrollableDiv.scrollTop
+        ) < 10;
+
+      // Si l'utilisateur n'est pas au bas de la page, désactiver l'auto-scroll
+      if (!isAtBottom && autoScroll && !userScrolled) {
+        setUserScrolled(true);
+        setAutoScroll(false);
+      }
+    }
+  }, [autoScroll, userScrolled]);
+
+  // Attacher et détacher l'écouteur d'événements de défilement
+  useEffect(() => {
+    const scrollableDiv = gridContainerRef.current?.querySelector(
+      ".MuiDataGrid-virtualScroller"
+    );
+
+    if (scrollableDiv) {
+      scrollableDiv.addEventListener("scroll", handleScroll);
+
+      return () => {
+        scrollableDiv.removeEventListener("scroll", handleScroll);
+      };
+    }
+  }, [handleScroll]);
 
   useEffect(() => {
     if (autoScroll && logs.length > 0) {
@@ -245,7 +309,7 @@ const ViewerPage = ({ project }) => {
       return unsubscribe;
     } catch (error) {
       console.error("Error starting log collection:", error);
-      showSnackbar("Error starting log collection");
+      showSnackbar(t("errorStartingLogCollection"));
     } finally {
       setLoading(false);
     }
@@ -258,7 +322,7 @@ const ViewerPage = ({ project }) => {
   const confirmClearLogs = () => {
     setLogs([]);
     setClearConfirmOpen(false);
-    showSnackbar("Logs cleared");
+    showSnackbar(t("logsCleared"));
   };
 
   const showSnackbar = (message) => {
@@ -273,21 +337,23 @@ const ViewerPage = ({ project }) => {
   const getLevelColor = (level) => {
     if (!level) return "default";
 
-    switch (level.toLowerCase()) {
+    const levelLower = level.toLowerCase();
+
+    // Pour conserver la cohérence avec les liserets, on utilise des couleurs personnalisées
+    switch (levelLower) {
       case "fatal":
       case "severe":
-        return "error"; // Rouge vif pour les erreurs critiques
       case "error":
-        return "error"; // Rouge pour les erreurs
+        return "error"; // Utilise la couleur d'erreur de Material UI
       case "warn":
       case "warning":
-        return "warning"; // Jaune/orange pour les avertissements
+        return "warning"; // Utilise la couleur d'avertissement de Material UI
       case "info":
-        return "info"; // Bleu pour les informations
+        return "info"; // La couleur info de Material UI est proche de celle qu'on utilise
       case "debug":
-        return "primary"; // Bleu primaire pour le débogage (plus distinct)
+        return "secondary"; // Pour la couleur violette
       case "trace":
-        return "secondary"; // Violet/gris pour les traces (moins prioritaire)
+        return "success"; // Pour la couleur verte/teal, success est la plus proche
       default:
         return "default"; // Gris neutre pour les cas non définis
     }
@@ -295,15 +361,36 @@ const ViewerPage = ({ project }) => {
 
   const renderCell = (columnId, value) => {
     if (columnId === "level" && value) {
+      const levelLower = value.toLowerCase();
+      let chipColor = getLevelColor(levelLower);
+      let customColor = null;
+
+      // Pour les types spécifiques qui nécessitent des couleurs personnalisées
+      if (levelLower === "debug") {
+        customColor = mode === "dark" ? "#8e24aa" : "#7b1fa2"; // Violet
+      } else if (levelLower === "trace") {
+        customColor = mode === "dark" ? "#00897b" : "#00796b"; // Vert/Teal
+      }
+
       return (
         <Chip
           label={value}
           size="small"
-          color={getLevelColor(value)}
+          color={chipColor}
           sx={{
             textTransform: "capitalize",
-            fontWeight: value.toLowerCase() === "error" ? "bold" : "normal",
+            fontWeight:
+              levelLower === "error" ||
+              levelLower === "fatal" ||
+              levelLower === "severe"
+                ? "bold"
+                : "normal",
             fontSize: `${fontSize}px`,
+            ...(customColor && {
+              bgcolor: customColor,
+              color: "#fff",
+              "& .MuiChip-label": { color: "#fff" },
+            }),
           }}
         />
       );
@@ -358,44 +445,75 @@ const ViewerPage = ({ project }) => {
         return false;
       }
 
-      // Apply column filters from the filter model
-      for (const filterItem of filterModel.items) {
-        const { field, operator, value } = filterItem;
-
-        // Skip if the log doesn't have this field or the value is undefined
-        if (log[field] === undefined) {
-          return false;
-        }
-
-        const logValue = String(log[field]).toLowerCase();
-        const filterValue = value?.toLowerCase() || "";
-
-        switch (operator) {
-          case "contains":
-            if (!logValue.includes(filterValue)) return false;
-            break;
-          case "equals":
-            if (logValue !== filterValue) return false;
-            break;
-          case "startsWith":
-            if (!logValue.startsWith(filterValue)) return false;
-            break;
-          case "endsWith":
-            if (!logValue.endsWith(filterValue)) return false;
-            break;
-          case "isEmpty":
-            if (logValue !== "") return false;
-            break;
-          case "isNotEmpty":
-            if (logValue === "") return false;
-            break;
-          default:
-            // Unknown operator - pass through
-            break;
-        }
+      // S'il n'y a pas de filtres, ou si le log correspond au levelFilter uniquement, retourner true
+      if (filterModel.items.length === 0) {
+        return true;
       }
 
-      return true;
+      // Appliquer les filtres de colonne selon le logicOperator
+      const logicOperator = filterModel.logicOperator || "or";
+
+      if (logicOperator === "or") {
+        // Si l'opérateur est OR, au moins un filtre doit correspondre
+        return filterModel.items.some((filterItem) => {
+          const { field, operator, value } = filterItem;
+
+          // Si le log n'a pas ce champ ou que la valeur est indéfinie, ce filtre ne correspond pas
+          if (log[field] === undefined) {
+            return false;
+          }
+
+          const logValue = String(log[field]).toLowerCase();
+          const filterValue = value?.toLowerCase() || "";
+
+          switch (operator) {
+            case "contains":
+              return logValue.includes(filterValue);
+            case "equals":
+              return logValue === filterValue;
+            case "startsWith":
+              return logValue.startsWith(filterValue);
+            case "endsWith":
+              return logValue.endsWith(filterValue);
+            case "isEmpty":
+              return logValue === "";
+            case "isNotEmpty":
+              return logValue !== "";
+            default:
+              return true; // Opérateur inconnu - passer
+          }
+        });
+      } else {
+        // Si l'opérateur est AND, tous les filtres doivent correspondre
+        return filterModel.items.every((filterItem) => {
+          const { field, operator, value } = filterItem;
+
+          // Si le log n'a pas ce champ ou que la valeur est indéfinie, ce filtre ne correspond pas
+          if (log[field] === undefined) {
+            return false;
+          }
+
+          const logValue = String(log[field]).toLowerCase();
+          const filterValue = value?.toLowerCase() || "";
+
+          switch (operator) {
+            case "contains":
+              return logValue.includes(filterValue);
+            case "equals":
+              return logValue === filterValue;
+            case "startsWith":
+              return logValue.startsWith(filterValue);
+            case "endsWith":
+              return logValue.endsWith(filterValue);
+            case "isEmpty":
+              return logValue === "";
+            case "isNotEmpty":
+              return logValue !== "";
+            default:
+              return true; // Opérateur inconnu - passer
+          }
+        });
+      }
     });
   }, [logs, filterModel, levelFilter]);
 
@@ -431,6 +549,7 @@ const ViewerPage = ({ project }) => {
             rows={getDataGridRows()}
             columns={columns}
             density={densityLevel}
+            onDensityChange={(newDensity) => setDensityLevel(newDensity)}
             disableRowSelectionOnClick
             loading={loading}
             apiRef={apiRef}
@@ -450,23 +569,63 @@ const ViewerPage = ({ project }) => {
                 if (level === "warn" || level === "warning") {
                   return "warning-row";
                 }
+                if (level === "info") {
+                  return "info-row";
+                }
+                if (level === "debug") {
+                  return "debug-row";
+                }
+                if (level === "trace") {
+                  return "trace-row";
+                }
               }
-              return "";
+              return "default-row"; // Surbrillance par défaut pour les logs sans niveau
             }}
             sx={{
               height: "100%",
               width: "100%",
+              "& .MuiDataGrid-row": {
+                borderBottom: "none",
+                "&:nth-of-type(odd)": {
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(255, 255, 255, 0.02)"
+                      : "rgba(0, 0, 0, 0.01)",
+                },
+                "&:hover": {
+                  bgcolor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(255, 255, 255, 0.05)"
+                      : "rgba(0, 0, 0, 0.03)",
+                },
+              },
               "& .error-row": {
-                bgcolor: (theme) =>
-                  theme.palette.mode === "dark"
-                    ? "rgba(211, 47, 47, 0.15)"
-                    : "rgba(211, 47, 47, 0.05)",
+                borderLeft: (theme) => `3px solid ${theme.palette.error.main}`,
               },
               "& .warning-row": {
-                bgcolor: (theme) =>
-                  theme.palette.mode === "dark"
-                    ? "rgba(237, 108, 2, 0.15)"
-                    : "rgba(237, 108, 2, 0.05)",
+                borderLeft: (theme) =>
+                  `3px solid ${theme.palette.warning.main}`,
+              },
+              "& .info-row": {
+                borderLeft: (theme) =>
+                  `3px solid ${
+                    theme.palette.mode === "dark" ? "#0288d1" : "#0277bd"
+                  }`,
+              },
+              "& .debug-row": {
+                borderLeft: (theme) =>
+                  `3px solid ${
+                    theme.palette.mode === "dark" ? "#8e24aa" : "#7b1fa2"
+                  }`,
+              },
+              "& .trace-row": {
+                borderLeft: (theme) =>
+                  `3px solid ${
+                    theme.palette.mode === "dark" ? "#00897b" : "#00796b"
+                  }`,
+              },
+              "& .default-row": {
+                borderLeft: (theme) => `3px solid ${theme.palette.divider}`,
               },
               "& .MuiDataGrid-cell": {
                 fontSize: `${fontSize}px`,
@@ -490,6 +649,10 @@ const ViewerPage = ({ project }) => {
                 autoScroll,
                 setAutoScroll,
                 scrollToBottom,
+                setUserScrolled,
+                densityLevel,
+                setDensityLevel,
+                apiRef,
               },
             }}
             initialState={{
@@ -514,17 +677,16 @@ const ViewerPage = ({ project }) => {
         open={clearConfirmOpen}
         onClose={() => setClearConfirmOpen(false)}
       >
-        <DialogTitle>Clear Logs</DialogTitle>
+        <DialogTitle>{t("clearLogsTitle")}</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to clear all logs? This action cannot be
-            undone.
-          </Typography>
+          <Typography>{t("clearLogsConfirmation")}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setClearConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={() => setClearConfirmOpen(false)}>
+            {t("cancelButton")}
+          </Button>
           <Button onClick={confirmClearLogs} color="error">
-            Clear
+            {t("clearButton")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -558,7 +720,10 @@ const ViewerPage = ({ project }) => {
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          {filteredLogs.length} of {logs.length} logs displayed
+          {t("logsDisplayed", {
+            filtered: filteredLogs.length,
+            total: logs.length,
+          })}
         </Typography>
       </Box>
     </Box>

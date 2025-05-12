@@ -21,10 +21,6 @@ export const ThemeProvider = ({ children }) => {
     setMode(prefersDarkMode ? "dark" : "light");
   }, [prefersDarkMode]);
 
-  const toggleTheme = () => {
-    setMode((prevMode) => (prevMode === "light" ? "dark" : "light"));
-  };
-
   const theme = useMemo(
     () =>
       createTheme({
@@ -90,7 +86,6 @@ export const ThemeProvider = ({ children }) => {
   const contextValue = {
     theme,
     mode,
-    toggleTheme,
   };
 
   return (

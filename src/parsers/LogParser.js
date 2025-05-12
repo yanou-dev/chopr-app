@@ -48,7 +48,6 @@ class LogParser extends BaseParser {
 
   parseLines(lines) {
     const linesArray = lines.split("\n").filter((line) => line !== "");
-    console.log("linesArray :", linesArray);
     let logsArray = [];
     for (const line of linesArray) {
       try {

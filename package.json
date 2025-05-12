@@ -1,17 +1,17 @@
 {
   "name": "chopr",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A modern desktop application for visualizing logs from various sources",
   "main": "public/electron.js",
   "homepage": "./",
   "scripts": {
     "start": "electron .",
-    "dev": "concurrently \"npm run start\" \"npm run dev:react\"",
-    "dev:react": "cross-env BROWSER=none react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "dev": "NODE_ENV=development concurrently \"npm run start\" \"npm run dev:react\"",
+    "dev:react": "cross-env BROWSER=none react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject",
-    "electron:build": "npm run build && electron-builder",
+    "electron:build": "NODE_ENV=production npm run build && electron-builder",
     "pack": "electron-builder --dir",
     "dist": "npm run build && electron-builder",
     "postinstall": "patch-package"
@@ -19,11 +19,39 @@
   "build": {
     "appId": "dev.yanou.Chopr",
     "productName": "Chopr",
+    "copyright": "Copyright © 2025 yanou.dev()",
     "files": [
       "!node_modules"
     ],
     "directories": {
       "output": "dist"
+    },
+    "mac": {
+      "icon": "public/AppIcon.icns",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "icon": "public/AppIcon.icns",
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "icon": "public/AppIcon.icns",
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
+    "dmg": {
+      "icon": "public/AppIcon.icns"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     }
   },
   "author": "",
@@ -35,7 +63,6 @@
     "@mui/material": "^7.0.2",
     "@mui/x-data-grid": "^8.1.0",
     "@mui/x-data-grid-pro": "^8.1.0",
-    "electron-is-dev": "^2.0.0",
     "jszip": "^3.10.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -51,7 +78,8 @@
     "jest": "^27.5.1",
     "patch-package": "^8.0.0",
     "postinstall-postinstall": "^2.1.0",
-    "react-app-rewired": "^2.2.1"
+    "react-app-rewired": "^2.2.1",
+    "terser-webpack-plugin": "^5.3.14"
   },
   "browserslist": {
     "production": [

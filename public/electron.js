@@ -1,9 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
-const isDev = require("electron-is-dev");
-const os = require("os");
+const isDev = process.env.NODE_ENV === "development";
 
 const userDataPath = path.join(
   app.getPath("userData"),
@@ -37,7 +36,7 @@ function createWindow() {
 
   const startUrl = isDev
     ? "http://localhost:3000"
-    : `file://${path.join(__dirname, "./build/index.html")}`;
+    : `file://${path.join(__dirname, "./index.html")}`;
 
   mainWindow.loadURL(startUrl);
 
@@ -85,6 +84,7 @@ ipcMain.handle("get-recent-projects", async () => {
           path: filePath,
           lastOpened: projectData.lastOpened || stats.mtime.toISOString(),
           lastModified: stats.mtime.toISOString(),
+          type: projectData.parser.type,
         });
       }
     }
@@ -365,9 +365,24 @@ ipcMain.handle("delete-project", async (event, projectId) => {
   }
 });
 
+ipcMain.handle("get-version", () => {
+  return app.getVersion();
+});
+
 app.on("before-quit", () => {
   for (const [id, { process }] of activeCommands.entries()) {
     process.kill();
   }
   activeCommands.clear();
+});
+
+// Open external URLs in default browser
+ipcMain.handle("open-external-url", async (event, url) => {
+  try {
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    console.error("Error opening external URL:", error);
+    return { success: false, error: error.message };
+  }
 });

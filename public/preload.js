@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld("electron", {
   selectProjectFile: () => ipcRenderer.invoke("select-project-file"),
   selectLogFile: () => ipcRenderer.invoke("select-log-file"),
   deleteProject: (projectId) => ipcRenderer.invoke("delete-project", projectId),
+  getVersion: () => ipcRenderer.invoke("get-version"),
 
   resizeWindow: (width, height, route) =>
     ipcRenderer.invoke("resize-window", { width, height, route }),
@@ -37,4 +38,6 @@ contextBridge.exposeInMainWorld("electron", {
       ipcRenderer.removeListener("command-closed", subscription);
     };
   },
+
+  openExternalUrl: (url) => ipcRenderer.invoke("open-external-url", url),
 });

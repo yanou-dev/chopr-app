@@ -7,9 +7,7 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon,
   IconButton,
-  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -24,20 +22,34 @@ import {
 } from "@mui/icons-material";
 import { useTheme } from "../contexts/ThemeContext";
 import TitleBar from "../components/TitleBar";
-import JSZip from "jszip";
+import { useTranslation } from "../i18n/i18n";
+import LogFormats from "../parsers/LogFormats";
 
 const HomePage = ({ setCurrentProject }) => {
   const navigate = useNavigate();
-  const { mode, toggleTheme } = useTheme();
+  const { mode } = useTheme();
+  const { t } = useTranslation();
   const [recentProjects, setRecentProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
   const [error, setError] = useState(null);
+  const [appVersion, setAppVersion] = useState("");
 
   useEffect(() => {
     loadRecentProjects();
+    loadAppVersion();
   }, []);
+
+  const loadAppVersion = async () => {
+    try {
+      const version = await window.electron.getVersion();
+      setAppVersion(version);
+    } catch (error) {
+      console.error("Error loading app version:", error);
+      setAppVersion("?.?.?");
+    }
+  };
 
   const loadRecentProjects = async () => {
     setLoading(true);
@@ -141,7 +153,7 @@ const HomePage = ({ setCurrentProject }) => {
             gutterBottom
             sx={{ fontWeight: "bold", mb: 2 }}
           >
-            Welcome to Chopr
+            {t("welcomeTitle")}
           </Typography>
 
           <Typography
@@ -150,7 +162,7 @@ const HomePage = ({ setCurrentProject }) => {
             paragraph
             sx={{ mb: 3 }}
           >
-            Create a new project or open an existing one to get started.
+            {t("noProjects")}
           </Typography>
 
           <Button
@@ -161,7 +173,7 @@ const HomePage = ({ setCurrentProject }) => {
             sx={{ mb: 2 }}
             disableElevation
           >
-            New Project
+            {t("createProject")}
           </Button>
 
           <Button
@@ -170,7 +182,7 @@ const HomePage = ({ setCurrentProject }) => {
             onClick={handleOpenProject}
             fullWidth
           >
-            Open Project
+            {t("openProject")}
           </Button>
         </Box>
 
@@ -187,70 +199,52 @@ const HomePage = ({ setCurrentProject }) => {
             }}
           >
             <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
-              Projects
+              {t("projectsList")}
             </Typography>
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Tooltip title="Export Projects">
-                <IconButton aria-label="export">
-                  <UploadIcon />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Import Projects">
-                <IconButton aria-label="import">
-                  <DownloadIcon />
-                </IconButton>
-              </Tooltip>
-            </Box>
           </Box>
 
           <Box sx={{ flexGrow: 1, overflow: "auto", p: 1 }}>
             {loading ? (
               <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                Loading recent projects...
+                {t("loadingProjects")}
               </Typography>
             ) : recentProjects.length === 0 ? (
               <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                No recent projects found. Create a new project to get started.
+                {t("noRecentProjects")}
               </Typography>
             ) : (
-              <List dense>
+              <List>
                 {recentProjects.map((project) => (
                   <ListItem
                     key={project.id}
-                    onClick={() => handleOpenRecentProject(project)}
-                    secondaryAction={
-                      <Tooltip title="Delete">
-                        <IconButton
-                          edge="end"
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            confirmDeleteProject(project);
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    }
                     sx={{
-                      cursor: "pointer",
                       borderRadius: 1,
                       mb: 0.5,
                       "&:hover": {
                         bgcolor: "action.hover",
                       },
                     }}
+                    secondaryAction={
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={() => confirmDeleteProject(project)}
+                        color="error"
+                        sx={{ ml: 1 }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    }
                   >
-                    <ListItemIcon sx={{ minWidth: 36 }}>
-                      <FolderOpenIcon fontSize="small" />
-                    </ListItemIcon>
                     <ListItemText
                       primary={project.name}
-                      secondary={`Last opened: ${formatDate(
-                        project.lastOpened
-                      )}`}
-                      primaryTypographyProps={{ variant: "body2" }}
-                      secondaryTypographyProps={{ variant: "caption" }}
+                      secondary={`${formatDate(project.lastOpened)} • ${
+                        LogFormats.find(
+                          (format) => format.value === project.type
+                        )?.label
+                      }`}
+                      sx={{ cursor: "pointer" }}
+                      onClick={() => handleOpenRecentProject(project)}
                     />
                   </ListItem>
                 ))}
@@ -269,36 +263,52 @@ const HomePage = ({ setCurrentProject }) => {
             }}
           >
             <Typography variant="caption" color="text.secondary">
-              Chopr v1.0.0
+              Chopr v{appVersion} • by{" "}
+              <Box
+                component="span"
+                onClick={() =>
+                  window.electron.openExternalUrl("https://yanou.dev")
+                }
+                sx={{
+                  color: "#bfc7d5",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  "&:hover": {
+                    textDecoration: "underline",
+                  },
+                }}
+              >
+                yanou.<span style={{ color: "#82aaff" }}>dev</span>()
+              </Box>
             </Typography>
             <Button
               variant="text"
               size="small"
-              onClick={toggleTheme}
+              onClick={() =>
+                window.electron.openExternalUrl(
+                  "https://github.com/yanouhd/chopr/issues"
+                )
+              }
               sx={{ minWidth: "auto" }}
             >
-              {mode === "light" ? "Dark Mode" : "Light Mode"}
+              {t("feedbackButton")}
             </Button>
           </Box>
         </Box>
       </Box>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete confirmation dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
-        <DialogTitle>Delete Project</DialogTitle>
+        <DialogTitle>{t("deleteProject")}</DialogTitle>
         <DialogContent>
-          <Typography>
-            Are you sure you want to delete "{projectToDelete?.name}"? This
-            action cannot be undone.
-          </Typography>
-          {error && <Typography color="error">{error}</Typography>}
+          <Typography>{t("confirmDeleteProject")}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)} size="small">
-            Cancel
+          <Button onClick={() => setOpenDialog(false)} color="primary">
+            {t("cancelButton")}
           </Button>
-          <Button onClick={handleDeleteProject} color="error" size="small">
-            Delete
+          <Button onClick={handleDeleteProject} color="error">
+            {t("deleteButton")}
           </Button>
         </DialogActions>
       </Dialog>

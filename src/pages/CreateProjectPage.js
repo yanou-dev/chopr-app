@@ -27,10 +27,12 @@ import { useTheme } from "../contexts/ThemeContext";
 import TitleBar from "../components/TitleBar";
 import { identifyLogType } from "../parsers/utils";
 import LogFormats from "../parsers/LogFormats";
+import { useTranslation } from "../i18n/i18n";
 
 const CreateProjectPage = ({ setCurrentProject }) => {
   const navigate = useNavigate();
   const { mode } = useTheme();
+  const { t } = useTranslation();
   const [exampleLog, setExampleLog] = useState("");
   const [projectName, setProjectName] = useState("");
   const [source, setSource] = useState("command");
@@ -76,17 +78,17 @@ const CreateProjectPage = ({ setCurrentProject }) => {
 
   const handleSave = async () => {
     if (!projectName.trim()) {
-      setError("Please enter a project name");
+      setError(t("nameRequired"));
       return;
     }
 
     if (source === "command" && !commandValue.trim()) {
-      setError("Please enter a command");
+      setError(t("sourceRequired"));
       return;
     }
 
     if (source === "file" && !filePath.trim()) {
-      setError("Please select or enter a file path");
+      setError(t("sourceRequired"));
       return;
     }
 
@@ -130,7 +132,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
         bgcolor: "background.default",
       }}
     >
-      <TitleBar title="New Project" />
+      <TitleBar title={t("createProjectTitle")} />
 
       <Box
         sx={{
@@ -149,7 +151,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
 
         <TextField
           fullWidth
-          label="Project Name"
+          label={t("projectName")}
           variant="outlined"
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
@@ -160,23 +162,17 @@ const CreateProjectPage = ({ setCurrentProject }) => {
         />
 
         <FormControl component="fieldset" sx={{ mb: 3, width: "100%" }}>
-          <FormLabel component="legend">Source Type</FormLabel>
+          <FormLabel component="legend">{t("sourceType")}</FormLabel>
           <RadioGroup value={source} onChange={handleSourceChange} row>
             <FormControlLabel
               value="command"
               control={<Radio size="small" />}
-              label="Command Output"
+              label={t("command")}
             />
             <FormControlLabel
               value="file"
               control={<Radio size="small" />}
-              label="Log File"
-            />
-            <FormControlLabel
-              value="process"
-              control={<Radio size="small" />}
-              label="Process (Coming in v2)"
-              disabled
+              label={t("file")}
             />
           </RadioGroup>
         </FormControl>
@@ -184,7 +180,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
         {source === "command" && (
           <TextField
             fullWidth
-            label="Command"
+            label={t("command")}
             variant="outlined"
             value={commandValue}
             onChange={(e) => setCommandValue(e.target.value)}
@@ -199,37 +195,36 @@ const CreateProjectPage = ({ setCurrentProject }) => {
           <Box sx={{ mb: 3 }}>
             <TextField
               fullWidth
-              label="File Path"
+              label={t("file")}
               variant="outlined"
               value={filePath}
               onChange={(e) => setFilePath(e.target.value)}
-              placeholder="/path/to/your/logfile.log"
+              placeholder="/path/to/your/log/file.log"
               size="small"
               InputProps={{
                 endAdornment: (
-                  <Button
-                    variant="outlined"
-                    onClick={handleSelectFile}
-                    startIcon={<FolderOpenIcon />}
+                  <IconButton
                     size="small"
-                    sx={{ ml: 1 }}
+                    edge="end"
+                    onClick={handleSelectFile}
+                    title="Browse"
                   >
-                    Browse
-                  </Button>
+                    <FolderOpenIcon />
+                  </IconButton>
                 ),
               }}
             />
           </Box>
         )}
 
-        <FormControl fullWidth size="small" sx={{ mb: 3 }}>
-          <InputLabel id="parser-type-label">Log Format</InputLabel>
+        <FormControl sx={{ mb: 3, minWidth: 120 }} size="small">
+          <InputLabel id="parser-type-label">{t("parserType")}</InputLabel>
           <Select
             labelId="parser-type-label"
             value={parserType}
-            label="Log Format"
+            label={t("parserType")}
             onChange={(e) => setParserType(e.target.value)}
-            size="small"
+            disabled={parserType === "auto" && identifiedLogType?.success}
           >
             {LogFormats.map((format) => (
               <MenuItem key={format.value} value={format.value}>
@@ -237,7 +232,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
               </MenuItem>
             ))}
             <MenuItem value="custom" disabled>
-              Custom Format (Coming in v2)
+              Custom (v2)
             </MenuItem>
           </Select>
         </FormControl>
@@ -246,7 +241,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
           <>
             <TextField
               fullWidth
-              label="Example Log"
+              label={t("exampleLog")}
               variant="outlined"
               value={exampleLog}
               onChange={(e) => setExampleLog(e.target.value)}
@@ -257,8 +252,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
               helperText={!!identifiedLogType && identifiedLogType.error}
             />
             <Alert severity="info" sx={{ mb: 3 }} variant="outlined">
-              Chopr will automaticaly identify the log format from the example
-              log you provide.
+              {t("autoDetectInfo")}
             </Alert>
           </>
         )}
@@ -275,7 +269,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
         }}
       >
         <Button variant="outlined" onClick={handleCancel} size="small">
-          Cancel
+          {t("cancelButton")}
         </Button>
         <Button
           variant="contained"
@@ -283,9 +277,9 @@ const CreateProjectPage = ({ setCurrentProject }) => {
           startIcon={<SaveIcon />}
           disableElevation
           size="small"
-          disabled={parserType === "auto"}
+          disabled={parserType === "auto" && !identifiedLogType?.success}
         >
-          Create Project
+          {t("saveButton")}
         </Button>
       </Box>
       <Snackbar
@@ -299,7 +293,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
           variant="filled"
           sx={{ width: "100%" }}
         >
-          Log type identified ! ({parserType})
+          {t("logTypeIdentified", { type: parserType })}
         </Alert>
       </Snackbar>
     </Box>
