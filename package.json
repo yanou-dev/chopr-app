@@ -5,13 +5,12 @@
   "main": "build/electron.js",
   "homepage": "./",
   "scripts": {
-    "start": "npm run compile:electron && electron .",
-    "dev": "NODE_ENV=development concurrently \"npm run compile:electron\" \"npm run dev:react\"",
+    "dev": "NODE_ENV=development concurrently \"npm run dev:electron\" \"npm run dev:react\"",
+    "dev:electron": "tsc -p electron.tsconfig.json && electron .",
     "dev:react": "cross-env BROWSER=none react-app-rewired start",
-    "build": "react-app-rewired build",
-    "electron:build": "NODE_ENV=production npm run compile:electron && npm run build && electron-builder",
+    "electron:build": "NODE_ENV=production npm run build && electron-builder",
+    "build": "react-app-rewired build && tsc -p electron.tsconfig.json",
     "check-types": "tsc --noEmit",
-    "compile:electron": "tsc -p electron.tsconfig.json && electron .",
     "test": "react-app-rewired test",
     "postinstall": "patch-package"
   },
@@ -21,7 +20,7 @@
     "copyright": "Copyright © 2025 yanou.dev()",
     "files": [
       "build/**/*",
-      "node_modules/**/*"
+      "!node_modules"
     ],
     "directories": {
       "output": "dist"

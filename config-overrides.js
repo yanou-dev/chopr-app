@@ -2,7 +2,6 @@ const { override, addWebpackPlugin } = require("customize-cra");
 const TerserPlugin = require("terser-webpack-plugin");
 
 module.exports = override((config) => {
-  // Configurer l'optimisation avec TerserPlugin pour la minification
   if (config.mode === "production") {
     config.optimization = {
       ...config.optimization,
