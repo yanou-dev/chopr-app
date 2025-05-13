@@ -25,6 +25,7 @@ import {
   GridToolbarFilterButton,
   GridToolbarDensitySelector,
 } from "@mui/x-data-grid-pro";
+import { frFR } from "@mui/x-data-grid-pro/locales";
 import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
 import TitleBar from "../components/TitleBar";
@@ -105,7 +106,7 @@ const CustomToolbar = (props) => {
 
 const ViewerPage = ({ project }) => {
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { mode } = useTheme();
   const parser =
     project?.parser?.type === "json"
@@ -556,6 +557,11 @@ const ViewerPage = ({ project }) => {
             filterMode="server"
             onFilterModelChange={handleFilterModelChange}
             filterModel={filterModel}
+            localeText={
+              language === "fr"
+                ? frFR.components.MuiDataGrid.defaultProps.localeText
+                : undefined
+            }
             getRowClassName={(params) => {
               if (params.row.level) {
                 const level = params.row.level.toLowerCase();
