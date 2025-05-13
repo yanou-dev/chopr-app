@@ -11,6 +11,6 @@
     "moduleResolution": "node",
     "resolveJsonModule": true
   },
-  "include": ["public/*.ts"],
+  "include": ["*.ts"],
   "exclude": ["node_modules", "src"]
 }

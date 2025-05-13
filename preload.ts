@@ -23,12 +23,15 @@ interface ProjectData {
 
 contextBridge.exposeInMainWorld("electron", {
   getRecentProjects: () => ipcRenderer.invoke("get-recent-projects"),
-  saveProject: (projectData: ProjectData) => ipcRenderer.invoke("save-project", projectData),
-  loadProject: (filePath: string) => ipcRenderer.invoke("load-project", filePath),
+  saveProject: (projectData: ProjectData) =>
+    ipcRenderer.invoke("save-project", projectData),
+  loadProject: (filePath: string) =>
+    ipcRenderer.invoke("load-project", filePath),
   openProject: () => ipcRenderer.invoke("open-project"),
   selectProjectFile: () => ipcRenderer.invoke("select-project-file"),
   selectLogFile: () => ipcRenderer.invoke("select-log-file"),
-  deleteProject: (projectId: string) => ipcRenderer.invoke("delete-project", projectId),
+  deleteProject: (projectId: string) =>
+    ipcRenderer.invoke("delete-project", projectId),
   getVersion: () => ipcRenderer.invoke("get-version"),
 
   resizeWindow: (width: number | null, height: number | null, route: string) =>
@@ -45,7 +48,8 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.invoke("watch-file", { id, filePath }),
 
   onCommandOutput: (callback: CommandCallback) => {
-    const subscription = (event: IpcRendererEvent, data: CommandData) => callback(data);
+    const subscription = (event: IpcRendererEvent, data: CommandData) =>
+      callback(data);
     ipcRenderer.on("command-output", subscription);
     return () => {
       ipcRenderer.removeListener("command-output", subscription);
@@ -53,12 +57,14 @@ contextBridge.exposeInMainWorld("electron", {
   },
 
   onCommandClosed: (callback: CommandCallback) => {
-    const subscription = (event: IpcRendererEvent, data: CommandData) => callback(data);
+    const subscription = (event: IpcRendererEvent, data: CommandData) =>
+      callback(data);
     ipcRenderer.on("command-closed", subscription);
     return () => {
       ipcRenderer.removeListener("command-closed", subscription);
     };
   },
 
-  openExternalUrl: (url: string) => ipcRenderer.invoke("open-external-url", url),
+  openExternalUrl: (url: string) =>
+    ipcRenderer.invoke("open-external-url", url),
 });
