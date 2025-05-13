@@ -24,6 +24,11 @@ import {
   GridToolbarColumnsButton,
   GridToolbarFilterButton,
   GridToolbarDensitySelector,
+  GridApiPro,
+  GridFilterModel,
+  GridRowClassNameParams,
+  GridDensity,
+  GridColumnVisibilityModel,
 } from "@mui/x-data-grid-pro";
 import { frFR } from "@mui/x-data-grid-pro/locales";
 import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
@@ -33,8 +38,60 @@ import LogParser from "../parsers/LogParser";
 import JSONParser from "../parsers/JSONParser";
 import { useTranslation } from "../i18n/i18n";
 import { useTheme } from "../contexts/ThemeContext";
+import { LogEntry, Column as ParserColumn } from "../parsers/BaseParser";
 
-const CustomToolbar = (props) => {
+declare module "@mui/x-data-grid-pro" {
+  interface ToolbarPropsOverrides {
+    handleClearLogs: () => void;
+    autoScroll: boolean;
+    setAutoScroll: (value: boolean) => void;
+    scrollToBottom: () => void;
+    setUserScrolled: (value: boolean) => void;
+    densityLevel: GridDensity;
+    setDensityLevel: (value: GridDensity) => void;
+    apiRef: React.RefObject<GridApiPro | null>;
+  }
+}
+
+// Type definitions
+interface CustomToolbarProps {
+  handleClearLogs: () => void;
+  autoScroll: boolean;
+  setAutoScroll: (value: boolean) => void;
+  scrollToBottom: () => void;
+  setUserScrolled: (value: boolean) => void;
+  densityLevel: GridDensity;
+  setDensityLevel: (value: GridDensity) => void;
+  apiRef: React.RefObject<GridApiPro | null>;
+}
+
+interface ProjectSource {
+  type: string;
+  value: string;
+}
+
+interface ProjectParser {
+  type: string;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  source: ProjectSource;
+  parser: ProjectParser;
+}
+
+interface CommandOutputData {
+  id: string;
+  data: string;
+}
+
+interface ViewerPageProps {
+  project: Project | null;
+}
+
+// Composant toolbar personnalisé
+function CustomToolbar(props: CustomToolbarProps) {
   const {
     handleClearLogs,
     autoScroll,
@@ -48,11 +105,11 @@ const CustomToolbar = (props) => {
 
   const { t } = useTranslation();
 
-  // Gérer le changement de densité
-  const handleDensityChange = (newDensity) => {
+  // Handle density change
+  const handleDensityChange = (newDensity: GridDensity) => {
     setDensityLevel(newDensity);
 
-    // Forcer la mise à jour du composant DataGrid
+    // Force update of the DataGrid component
     if (apiRef.current) {
       apiRef.current.setDensity(newDensity);
     }
@@ -72,7 +129,7 @@ const CustomToolbar = (props) => {
       <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
         <GridToolbarColumnsButton />
         <GridToolbarFilterButton />
-        <GridToolbarDensitySelector onChange={handleDensityChange} />
+        <GridToolbarDensitySelector />
       </Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <Button
@@ -102,42 +159,43 @@ const CustomToolbar = (props) => {
       </Box>
     </GridToolbarContainer>
   );
-};
+}
 
-const ViewerPage = ({ project }) => {
+const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
   const navigate = useNavigate();
   const { t, language } = useTranslation();
   const { mode } = useTheme();
   const parser =
     project?.parser?.type === "json"
       ? new JSONParser()
-      : new LogParser(project?.parser?.type);
+      : new LogParser(project?.parser?.type || "");
 
   // State variables
-  const [logs, setLogs] = useState([]);
-  const [columns, setColumns] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [levelFilter, setLevelFilter] = useState("all");
-  const [commandId, setCommandId] = useState(null);
-  const [autoScroll, setAutoScroll] = useState(true);
-  const [columnVisibility, setColumnVisibility] = useState({});
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
-  const [pinnedColumns, setPinnedColumns] = useState({});
-  const [fontSize, setFontSize] = useState(12);
-  const [densityLevel, setDensityLevel] = useState("compact");
-  const [filterModel, setFilterModel] = useState({
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [columns, setColumns] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [levelFilter, setLevelFilter] = useState<string>("all");
+  const [commandId, setCommandId] = useState<string | null>(null);
+  const [autoScroll, setAutoScroll] = useState<boolean>(true);
+  const [columnVisibility, setColumnVisibility] =
+    useState<GridColumnVisibilityModel>({});
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [clearConfirmOpen, setClearConfirmOpen] = useState<boolean>(false);
+  const [pinnedColumns, setPinnedColumns] = useState<Record<string, any>>({});
+  const [fontSize, setFontSize] = useState<number>(12);
+  const [densityLevel, setDensityLevel] = useState<GridDensity>("compact");
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({
     items: [],
   });
-  const [userScrolled, setUserScrolled] = useState(false);
+  const [userScrolled, setUserScrolled] = useState<boolean>(false);
 
-  const gridContainerRef = useRef(null);
-  const lastAddedLogRef = useRef(null);
-  const apiRef = useRef(null);
+  const gridContainerRef = useRef<HTMLDivElement | null>(null);
+  const lastAddedLogRef = useRef<string | null>(null);
+  const apiRef = useRef<GridApiPro | null>(null);
 
   useEffect(() => {
-    parser.on("columnsChanged", (newColumns) => {
+    parser.on("columnsChanged", (newColumns: ParserColumn[]) => {
       const gridColumns = newColumns.map((col) => {
         return {
           field: col.id,
@@ -147,8 +205,8 @@ const ViewerPage = ({ project }) => {
           filterable: true,
           resizable: true,
           flex: col.id === "message" ? 1 : 0,
-          renderCell: (params) => renderCell(col.id, params.value),
-          hide: columnVisibility[col.field] === false,
+          renderCell: (params: any) => renderCell(col.id, params.value),
+          hide: columnVisibility[col.id] === false,
         };
       });
       setColumns(gridColumns);
@@ -169,7 +227,7 @@ const ViewerPage = ({ project }) => {
     }
   }, [autoScroll]);
 
-  // Nouveau gestionnaire d'événements de défilement
+  // New scroll event handler
   const handleScroll = useCallback(() => {
     if (!gridContainerRef.current) return;
 
@@ -185,7 +243,7 @@ const ViewerPage = ({ project }) => {
             scrollableDiv.scrollTop
         ) < 10;
 
-      // Si l'utilisateur n'est pas au bas de la page, désactiver l'auto-scroll
+      // If the user is not at the bottom of the page, disable auto-scroll
       if (!isAtBottom && autoScroll && !userScrolled) {
         setUserScrolled(true);
         setAutoScroll(false);
@@ -193,7 +251,7 @@ const ViewerPage = ({ project }) => {
     }
   }, [autoScroll, userScrolled]);
 
-  // Attacher et détacher l'écouteur d'événements de défilement
+  // Attach and detach the scroll event listener
   useEffect(() => {
     const scrollableDiv = gridContainerRef.current?.querySelector(
       ".MuiDataGrid-virtualScroller"
@@ -213,7 +271,8 @@ const ViewerPage = ({ project }) => {
       const currentLastRow = logs[logs.length - 1].id;
 
       if (currentLastRow !== lastAddedLogRef.current) {
-        lastAddedLogRef.current = currentLastRow;
+        // Assurez-vous que currentLastRow est une chaîne non nulle
+        lastAddedLogRef.current = currentLastRow || null;
         setTimeout(scrollToBottom, 100);
       }
     }
@@ -222,7 +281,7 @@ const ViewerPage = ({ project }) => {
     if (logs.length === 1 && apiRef.current) {
       setTimeout(() => {
         try {
-          apiRef.current.autosizeColumns({
+          apiRef.current?.autosizeColumns({
             expand: true,
           });
         } catch (e) {
@@ -253,7 +312,7 @@ const ViewerPage = ({ project }) => {
     }
   }, [project?.id]);
 
-  const addLogEntry = (logEntry) => {
+  const addLogEntry = (logEntry: LogEntry) => {
     const logId = crypto.randomUUID();
     logEntry.id = logId;
 
@@ -271,41 +330,49 @@ const ViewerPage = ({ project }) => {
     });
   };
 
-  const startLogCollection = async () => {
+  const startLogCollection = async (): Promise<(() => void) | void> => {
     setLoading(true);
 
     try {
-      const id = `${project.source.type}-${Date.now()}`;
+      const id = `${project!.source.type}-${Date.now()}`;
       setCommandId(id);
 
-      if (project.source.type === "command") {
-        await window.electron.startCommand(id, project.source.value);
-      } else if (project.source.type === "file") {
-        await window.electron.watchFile(id, project.source.value);
+      if (project!.source.type === "command") {
+        await window.electron.startCommand(id, project!.source.value);
+      } else if (project!.source.type === "file") {
+        await window.electron.watchFile(id, project!.source.value);
       }
 
-      const unsubscribe = window.electron.onCommandOutput((data) => {
-        if (data.id === id) {
-          if (!data.data || data.data.trim() === "") return;
+      const unsubscribe = window.electron.onCommandOutput(
+        (data: CommandOutputData) => {
+          if (data.id === id) {
+            if (!data.data || data.data.trim() === "") return;
 
-          try {
-            const parsedData = parser.parseLines(data.data);
-            for (const log of parsedData) {
-              addLogEntry(log);
+            try {
+              const parsedData = parser.parseLines(data.data);
+              for (const log of parsedData) {
+                // Ensure each log has an ID
+                const logWithId: LogEntry = {
+                  ...log,
+                  id: log.id || crypto.randomUUID(),
+                };
+                addLogEntry(logWithId);
+              }
+            } catch (e) {
+              console.error(e);
+              const logEntry: LogEntry = {
+                id: crypto.randomUUID(),
+                level: "info",
+                message: data.data.trim(),
+                timestamp: new Date().toLocaleString(),
+                rawTimestamp: new Date().toISOString(),
+                rawLog: data.data,
+              };
+              addLogEntry(logEntry);
             }
-          } catch (e) {
-            console.error(e);
-            const logEntry = {
-              level: "info",
-              message: data.data.trim(),
-              timestamp: new Date().toLocaleString(),
-              rawTimestamp: new Date().toISOString(),
-              rawLog: data.data,
-            };
-            addLogEntry(logEntry);
           }
         }
-      });
+      );
 
       return unsubscribe;
     } catch (error) {
@@ -326,7 +393,7 @@ const ViewerPage = ({ project }) => {
     showSnackbar(t("logsCleared"));
   };
 
-  const showSnackbar = (message) => {
+  const showSnackbar = (message: string) => {
     setSnackbarMessage(message);
     setSnackbarOpen(true);
   };
@@ -335,49 +402,49 @@ const ViewerPage = ({ project }) => {
     setSnackbarOpen(false);
   };
 
-  const getLevelColor = (level) => {
+  const getLevelColor = (level: string | undefined): string => {
     if (!level) return "default";
 
     const levelLower = level.toLowerCase();
 
-    // Pour conserver la cohérence avec les liserets, on utilise des couleurs personnalisées
+    // To maintain consistency with the borders, we use custom colors
     switch (levelLower) {
       case "fatal":
       case "severe":
       case "error":
-        return "error"; // Utilise la couleur d'erreur de Material UI
+        return "error"; // Uses Material UI error color
       case "warn":
       case "warning":
-        return "warning"; // Utilise la couleur d'avertissement de Material UI
+        return "warning"; // Uses Material UI warning color
       case "info":
-        return "info"; // La couleur info de Material UI est proche de celle qu'on utilise
+        return "info"; // Material UI's info color is similar to what we use
       case "debug":
-        return "secondary"; // Pour la couleur violette
+        return "secondary"; // For the purple color
       case "trace":
-        return "success"; // Pour la couleur verte/teal, success est la plus proche
+        return "success"; // For the green/teal color, success is the closest match
       default:
-        return "default"; // Gris neutre pour les cas non définis
+        return "default"; // Neutral gray for undefined cases
     }
   };
 
-  const renderCell = (columnId, value) => {
+  const renderCell = (columnId: string, value: any) => {
     if (columnId === "level" && value) {
       const levelLower = value.toLowerCase();
       let chipColor = getLevelColor(levelLower);
-      let customColor = null;
+      let customColor: string | null = null;
 
-      // Pour les types spécifiques qui nécessitent des couleurs personnalisées
+      // For specific types that require custom colors
       if (levelLower === "debug") {
-        customColor = mode === "dark" ? "#8e24aa" : "#7b1fa2"; // Violet
+        customColor = mode === "dark" ? "#8e24aa" : "#7b1fa2"; // Purple
       } else if (levelLower === "trace") {
-        customColor = mode === "dark" ? "#00897b" : "#00796b"; // Vert/Teal
+        customColor = mode === "dark" ? "#00897b" : "#00796b"; // Green/Teal
       }
 
       return (
         <Chip
           label={value}
           size="small"
-          color={chipColor}
+          color={chipColor as any}
           sx={{
             textTransform: "capitalize",
             fontWeight:
@@ -446,26 +513,26 @@ const ViewerPage = ({ project }) => {
         return false;
       }
 
-      // S'il n'y a pas de filtres, ou si le log correspond au levelFilter uniquement, retourner true
+      // If there are no filters, or if the log matches only the levelFilter, return true
       if (filterModel.items.length === 0) {
         return true;
       }
 
-      // Appliquer les filtres de colonne selon le logicOperator
+      // Apply column filters according to the logicOperator
       const logicOperator = filterModel.logicOperator || "or";
 
       if (logicOperator === "or") {
-        // Si l'opérateur est OR, au moins un filtre doit correspondre
+        // If the operator is OR, at least one filter must match
         return filterModel.items.some((filterItem) => {
           const { field, operator, value } = filterItem;
 
-          // Si le log n'a pas ce champ ou que la valeur est indéfinie, ce filtre ne correspond pas
+          // If the log doesn't have this field or the value is undefined, this filter doesn't match
           if (log[field] === undefined) {
             return false;
           }
 
           const logValue = String(log[field]).toLowerCase();
-          const filterValue = value?.toLowerCase() || "";
+          const filterValue = (value as string)?.toLowerCase() || "";
 
           switch (operator) {
             case "contains":
@@ -481,21 +548,21 @@ const ViewerPage = ({ project }) => {
             case "isNotEmpty":
               return logValue !== "";
             default:
-              return true; // Opérateur inconnu - passer
+              return true; // Unknown operator - pass
           }
         });
       } else {
-        // Si l'opérateur est AND, tous les filtres doivent correspondre
+        // If the operator is AND, all filters must match
         return filterModel.items.every((filterItem) => {
           const { field, operator, value } = filterItem;
 
-          // Si le log n'a pas ce champ ou que la valeur est indéfinie, ce filtre ne correspond pas
+          // If the log doesn't have this field or the value is undefined, this filter doesn't match
           if (log[field] === undefined) {
             return false;
           }
 
           const logValue = String(log[field]).toLowerCase();
-          const filterValue = value?.toLowerCase() || "";
+          const filterValue = (value as string)?.toLowerCase() || "";
 
           switch (operator) {
             case "contains":
@@ -511,7 +578,7 @@ const ViewerPage = ({ project }) => {
             case "isNotEmpty":
               return logValue !== "";
             default:
-              return true; // Opérateur inconnu - passer
+              return true; // Unknown operator - pass
           }
         });
       }
@@ -525,7 +592,7 @@ const ViewerPage = ({ project }) => {
     }));
   };
 
-  const handleFilterModelChange = (newFilterModel) => {
+  const handleFilterModelChange = (newFilterModel: GridFilterModel) => {
     setFilterModel(newFilterModel);
   };
 
@@ -562,7 +629,7 @@ const ViewerPage = ({ project }) => {
                 ? frFR.components.MuiDataGrid.defaultProps.localeText
                 : undefined
             }
-            getRowClassName={(params) => {
+            getRowClassName={(params: GridRowClassNameParams) => {
               if (params.row.level) {
                 const level = params.row.level.toLowerCase();
                 if (
@@ -585,7 +652,7 @@ const ViewerPage = ({ project }) => {
                   return "trace-row";
                 }
               }
-              return "default-row"; // Surbrillance par défaut pour les logs sans niveau
+              return "default-row"; // Default highlight for logs without a level
             }}
             sx={{
               height: "100%",

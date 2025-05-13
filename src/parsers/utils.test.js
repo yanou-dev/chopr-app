@@ -9,11 +9,11 @@ const logExamples = {
     '{"eventTime":"2024-01-18T03:12:45.123Z","eventType":"SYSTEM","status":"critical","component":"disk","message":"Low disk space"}',
   ],
   log4j: [
-    "2023-05-12 15:23:45.123 INFO  [pool-2-thread-1] org.example.service.UserService - User authenticated successfully with token",
-    "2023-08-17 09:32:18.456 ERROR [http-nio-8080-exec-5] org.example.controller.PaymentController - Failed to process payment: Invalid card number",
-    "2024-01-30 22:15:02.789 WARN  [scheduler-5] org.example.batch.EmailJob - Retry attempt 3 of 5 for sending emails",
-    "2023-12-05 14:28:37.321 DEBUG [app-initializer] org.example.config.DatabaseConfig - Connected to database v10.5.3 with 8 active connections",
-    "2023-11-11 03:45:12.654 FATAL [main] org.example.Application - Application failed to start: No configuration file found at path /etc/app/config.yml",
+    "2025-05-13 14:23:45,128 INFO [com.example.service.UserService] - User 'johndoe' successfully authenticated",
+    "2025-05-13 14:23:46,325 DEBUG [com.example.dao.ProductDAO] - Fetching product details for productId=89721",
+    "2025-05-13 14:23:47,569 ERROR [com.example.service.PaymentService] - Failed to process payment: Connection timeout with payment gateway",
+    "2025-05-13 14:23:48,721 WARN [com.example.util.CacheManager] - Cache hit ratio below threshold (45%), consider increasing cache size",
+    "2025-05-13 14:23:49,456 FATAL [com.example.core.ApplicationContext] - Unable to initialize application context: Database connection failed",
   ],
   logback: [
     "2025-04-29 00:40:52.538 TRACE o.a.c.c.file.remote.SftpConsumer - SftpFile[fileName=archive, longName=drwxrwxr-x    2 hr_decathlonevents sftpusers    40960 Apr 28 23:58 archive, dir=true]",

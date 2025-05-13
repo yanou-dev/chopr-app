@@ -25,23 +25,29 @@ import TitleBar from "../components/TitleBar";
 import { useTranslation } from "../i18n/i18n";
 import LogFormats from "../parsers/LogFormats";
 
-const HomePage = ({ setCurrentProject }) => {
+// Les types Project et ProjectResponse sont définis globalement dans react-app-env.d.ts
+
+interface HomePageProps {
+  setCurrentProject: React.Dispatch<React.SetStateAction<Project | null>>;
+}
+
+const HomePage: React.FC<HomePageProps> = ({ setCurrentProject }) => {
   const navigate = useNavigate();
   const { mode } = useTheme();
   const { t } = useTranslation();
-  const [recentProjects, setRecentProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState(null);
-  const [error, setError] = useState(null);
-  const [appVersion, setAppVersion] = useState("");
+  const [recentProjects, setRecentProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [openDialog, setOpenDialog] = useState<boolean>(false);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string>("");
 
   useEffect(() => {
     loadRecentProjects();
     loadAppVersion();
   }, []);
 
-  const loadAppVersion = async () => {
+  const loadAppVersion = async (): Promise<void> => {
     try {
       const version = await window.electron.getVersion();
       setAppVersion(version);
@@ -51,10 +57,10 @@ const HomePage = ({ setCurrentProject }) => {
     }
   };
 
-  const loadRecentProjects = async () => {
+  const loadRecentProjects = async (): Promise<void> => {
     setLoading(true);
     try {
-      const projects = await window.electron.getRecentProjects();
+      const projects: Project[] = await window.electron.getRecentProjects();
       setRecentProjects(projects);
     } catch (error) {
       console.error("Error loading recent projects:", error);
@@ -63,14 +69,14 @@ const HomePage = ({ setCurrentProject }) => {
     }
   };
 
-  const handleCreateProject = () => {
+  const handleCreateProject = (): void => {
     navigate("/create");
   };
 
-  const handleOpenProject = async () => {
+  const handleOpenProject = async (): Promise<void> => {
     try {
-      const result = await window.electron.openProject();
-      if (result.success) {
+      const result: ProjectResponse = await window.electron.openProject();
+      if (result.success && result.data) {
         setCurrentProject(result.data);
         navigate("/viewer");
       }
@@ -79,10 +85,12 @@ const HomePage = ({ setCurrentProject }) => {
     }
   };
 
-  const handleOpenRecentProject = async (project) => {
+  const handleOpenRecentProject = async (project: Project): Promise<void> => {
     try {
-      const result = await window.electron.loadProject(project.path);
-      if (result.success) {
+      const result: ProjectResponse = await window.electron.loadProject(
+        project.path
+      );
+      if (result.success && result.data) {
         setCurrentProject(result.data);
         navigate("/viewer");
       }
@@ -91,12 +99,12 @@ const HomePage = ({ setCurrentProject }) => {
     }
   };
 
-  const confirmDeleteProject = (project) => {
+  const confirmDeleteProject = (project: Project): void => {
     setProjectToDelete(project);
     setOpenDialog(true);
   };
 
-  const handleDeleteProject = async () => {
+  const handleDeleteProject = async (): Promise<void> => {
     if (!projectToDelete) return;
 
     try {
@@ -113,9 +121,9 @@ const HomePage = ({ setCurrentProject }) => {
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
-    return isNaN(date) ? "Invalid date" : date.toLocaleDateString();
+    return isNaN(date.getTime()) ? "Invalid date" : date.toLocaleDateString();
   };
 
   return (

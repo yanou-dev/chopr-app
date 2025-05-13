@@ -13,7 +13,9 @@ import HomePage from "./pages/HomePage";
 import CreateProjectPage from "./pages/CreateProjectPage";
 import ViewerPage from "./pages/ViewerPage";
 
-const WindowResizer = () => {
+// Types sont définis dans react-app-env.d.ts
+
+const WindowResizer: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
@@ -23,9 +25,9 @@ const WindowResizer = () => {
   return null;
 };
 
-function App() {
+const App: React.FC = () => {
   const { theme } = useTheme();
-  const [currentProject, setCurrentProject] = useState(null);
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
   return (
     <Router>
@@ -64,6 +66,6 @@ function App() {
       </Box>
     </Router>
   );
-}
+};
 
 export default App;

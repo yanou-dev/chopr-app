@@ -1,7 +1,11 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 
-const TitleBar = ({ title }) => {
+interface TitleBarProps {
+  title?: string;
+}
+
+const TitleBar: React.FC<TitleBarProps> = ({ title }) => {
   return (
     <Box
       sx={{

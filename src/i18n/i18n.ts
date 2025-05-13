@@ -1,12 +1,16 @@
 import { useLanguage } from "../contexts/LanguageContext";
 import translations from "./translations";
 
+interface TranslationParams {
+  [key: string]: string | number;
+}
+
 // Hook pour accéder aux traductions
 export const useTranslation = () => {
   const { language } = useLanguage();
 
   // Fonction de traduction
-  const t = (key, params = {}) => {
+  const t = (key: string, params: TranslationParams = {}): string => {
     // Récupérer les traductions pour la langue actuelle ou l'anglais par défaut
     const currentTranslations = translations[language] || translations.en;
 
@@ -16,7 +20,7 @@ export const useTranslation = () => {
     // Remplacer les paramètres dans la traduction
     if (params && Object.keys(params).length > 0) {
       Object.keys(params).forEach((param) => {
-        translation = translation.replace(`{${param}}`, params[param]);
+        translation = translation.replace(`{${param}}`, String(params[param]));
       });
     }
 

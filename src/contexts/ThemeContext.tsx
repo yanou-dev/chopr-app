@@ -4,18 +4,30 @@ import React, {
   useContext,
   useMemo,
   useEffect,
+  ReactNode,
 } from "react";
 import {
   ThemeProvider as MuiThemeProvider,
   createTheme,
+  Theme,
 } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
-const ThemeContext = createContext();
+// Types
+interface ThemeContextType {
+  theme: Theme;
+  mode: 'light' | 'dark';
+}
 
-export const ThemeProvider = ({ children }) => {
+interface ThemeProviderProps {
+  children: ReactNode;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
-  const [mode, setMode] = useState(prefersDarkMode ? "dark" : "light");
+  const [mode, setMode] = useState<'light' | 'dark'>(prefersDarkMode ? "dark" : "light");
 
   useEffect(() => {
     setMode(prefersDarkMode ? "dark" : "light");
@@ -83,7 +95,7 @@ export const ThemeProvider = ({ children }) => {
     [mode]
   );
 
-  const contextValue = {
+  const contextValue: ThemeContextType = {
     theme,
     mode,
   };
@@ -95,7 +107,7 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
-export const useTheme = () => {
+export const useTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
   if (!context) {
     throw new Error("useTheme must be used within a ThemeProvider");

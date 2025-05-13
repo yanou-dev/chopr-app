@@ -1,5 +1,11 @@
 // Fichier contenant toutes les traductions de l'application
-const translations = {
+interface Translations {
+  [key: string]: {
+    [key: string]: string;
+  };
+}
+
+const translations: Translations = {
   en: {
     // Barre d'outils
     columnsButton: "Columns",

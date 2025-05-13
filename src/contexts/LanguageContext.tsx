@@ -1,27 +1,45 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useContext, useEffect, ReactNode } from "react";
+
+// Types
+export type Language = 'fr' | 'en';
+
+interface SupportedLanguages {
+  [key: string]: string;
+}
+
+interface LanguageContextType {
+  language: Language;
+  supportedLanguages: SupportedLanguages;
+}
+
+interface LanguageProviderProps {
+  children: ReactNode;
+}
 
 // Langues supportées
-export const SUPPORTED_LANGUAGES = {
+export const SUPPORTED_LANGUAGES: SupportedLanguages = {
   fr: "Français",
   en: "English",
   // Vous pouvez ajouter d'autres langues ici au besoin
 };
 
 // Contexte des langues
-const LanguageContext = createContext();
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 // Détecter la langue du système
-const detectSystemLanguage = () => {
-  const navigatorLanguage = navigator.language || navigator.userLanguage;
+const detectSystemLanguage = (): Language => {
+  const navigatorLanguage = navigator.language;
   const baseLanguage = navigatorLanguage.split("-")[0].toLowerCase();
 
   // Vérifier si la langue du système est supportée, sinon utiliser l'anglais par défaut
-  return SUPPORTED_LANGUAGES[baseLanguage] ? baseLanguage : "en";
+  return (Object.keys(SUPPORTED_LANGUAGES).includes(baseLanguage) 
+    ? baseLanguage 
+    : "en") as Language;
 };
 
 // Provider du contexte de langue
-export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState(detectSystemLanguage());
+export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
+  const [language, setLanguage] = useState<Language>(detectSystemLanguage());
 
   // Mettre à jour la langue lorsque la langue du navigateur change
   useEffect(() => {
@@ -33,7 +51,7 @@ export const LanguageProvider = ({ children }) => {
   }, []);
 
   // Valeur du contexte à fournir
-  const contextValue = {
+  const contextValue: LanguageContextType = {
     language,
     supportedLanguages: SUPPORTED_LANGUAGES,
   };
@@ -46,7 +64,7 @@ export const LanguageProvider = ({ children }) => {
 };
 
 // Hook pour utiliser le contexte de langue
-export const useLanguage = () => {
+export const useLanguage = (): LanguageContextType => {
   const context = useContext(LanguageContext);
   if (!context) {
     throw new Error("useLanguage must be used within a LanguageProvider");

@@ -1,4 +1,9 @@
-export default [
+interface LogFormat {
+  value: string;
+  label: string;
+}
+
+const LogFormats: LogFormat[] = [
   {
     value: "auto",
     label: "Auto-detect (recommended)",
@@ -68,3 +73,5 @@ export default [
     label: "Generic text logs",
   },
 ];
+
+export default LogFormats;

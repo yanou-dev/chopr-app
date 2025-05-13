@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require("electron");
-const path = require("path");
-const fs = require("fs");
-const { spawn } = require("child_process");
+import { app, BrowserWindow, ipcMain, dialog, shell, IpcMainInvokeEvent } from "electron";
+import * as path from "path";
+import * as fs from "fs";
+import { spawn, ChildProcess } from "child_process";
+
 const isDev = process.env.NODE_ENV === "development";
 
 const userDataPath = path.join(
@@ -13,9 +14,35 @@ if (!fs.existsSync(userDataPath)) {
   fs.mkdirSync(userDataPath, { recursive: true });
 }
 
-let mainWindow;
+let mainWindow: BrowserWindow | null;
 
-function createWindow() {
+interface CommandProcess {
+  process: ChildProcess;
+}
+
+interface ProjectData {
+  name: string;
+  lastOpened?: string;
+  parser: {
+    type: string;
+  };
+  [key: string]: any;
+}
+
+interface ProjectResponse {
+  success: boolean;
+  data?: ProjectData;
+  error?: string;
+  path?: string;
+  canceled?: boolean;
+}
+
+interface FileSelectResponse {
+  canceled: boolean;
+  filePath?: string;
+}
+
+function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
@@ -41,7 +68,7 @@ function createWindow() {
   mainWindow.loadURL(startUrl);
 
   mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
+    mainWindow?.show();
   });
 
   mainWindow.on("closed", () => {
@@ -76,7 +103,7 @@ ipcMain.handle("get-recent-projects", async () => {
       if (file.endsWith(".json")) {
         const filePath = path.join(userDataPath, file);
         const stats = fs.statSync(filePath);
-        const projectData = JSON.parse(fs.readFileSync(filePath, "utf8"));
+        const projectData: ProjectData = JSON.parse(fs.readFileSync(filePath, "utf8"));
 
         projects.push({
           id: projectData.name.replace(/[^a-z0-9]/gi, "_").toLowerCase(),
@@ -96,7 +123,7 @@ ipcMain.handle("get-recent-projects", async () => {
       const dateB = b.lastOpened
         ? new Date(b.lastOpened)
         : new Date(b.lastModified);
-      return dateB - dateA;
+      return dateB.getTime() - dateA.getTime();
     });
 
     return projects;
@@ -106,7 +133,7 @@ ipcMain.handle("get-recent-projects", async () => {
   }
 });
 
-ipcMain.handle("save-project", async (event, projectData) => {
+ipcMain.handle("save-project", async (event: IpcMainInvokeEvent, projectData: ProjectData): Promise<ProjectResponse> => {
   try {
     const fileName = `${projectData.name
       .replace(/[^a-z0-9]/gi, "_")
@@ -118,46 +145,52 @@ ipcMain.handle("save-project", async (event, projectData) => {
     return { success: true, path: filePath };
   } catch (error) {
     console.error("Error saving project:", error);
-    return { success: false, error: error.message };
+    const err = error as Error;
+    return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle("load-project", async (event, filePath) => {
+ipcMain.handle("load-project", async (event: IpcMainInvokeEvent, filePath: string): Promise<ProjectResponse> => {
   try {
-    const projectData = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const projectData: ProjectData = JSON.parse(fs.readFileSync(filePath, "utf8"));
     projectData.lastOpened = new Date().toISOString();
     fs.writeFileSync(filePath, JSON.stringify(projectData, null, 2));
     return { success: true, data: projectData };
   } catch (error) {
     console.error("Error loading project:", error);
-    return { success: false, error: error.message };
+    const err = error as Error;
+    return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle("open-project", async (event, filePath) => {
+ipcMain.handle("open-project", async (event: IpcMainInvokeEvent): Promise<ProjectResponse> => {
   try {
-    const result = await dialog.showOpenDialog(mainWindow, {
+    const result = await dialog.showOpenDialog(mainWindow!, {
       properties: ["openFile"],
       filters: [{ name: "JSON", extensions: ["json"] }],
       defaultPath: userDataPath,
     });
+    
     if (result.canceled) {
-      return { canceled: true };
+      return { canceled: true, success: false };
     }
-    const projectData = JSON.parse(
+    
+    const projectData: ProjectData = JSON.parse(
       fs.readFileSync(result.filePaths[0], "utf8")
     );
+    
     projectData.lastOpened = new Date().toISOString();
     fs.writeFileSync(result.filePaths[0], JSON.stringify(projectData, null, 2));
     return { success: true, data: projectData };
   } catch (error) {
     console.error("Error opening project:", error);
-    return { success: false, error: error.message };
+    const err = error as Error;
+    return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle("select-project-file", async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
+ipcMain.handle("select-project-file", async (): Promise<FileSelectResponse> => {
+  const result = await dialog.showOpenDialog(mainWindow!, {
     properties: ["openFile"],
     filters: [{ name: "JSON", extensions: ["json"] }],
     defaultPath: userDataPath,
@@ -170,8 +203,8 @@ ipcMain.handle("select-project-file", async () => {
   return { canceled: false, filePath: result.filePaths[0] };
 });
 
-ipcMain.handle("select-log-file", async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
+ipcMain.handle("select-log-file", async (): Promise<FileSelectResponse> => {
+  const result = await dialog.showOpenDialog(mainWindow!, {
     properties: ["openFile"],
     filters: [{ name: "Log Files", extensions: ["log", "txt"] }],
   });
@@ -183,10 +216,16 @@ ipcMain.handle("select-log-file", async () => {
   return { canceled: false, filePath: result.filePaths[0] };
 });
 
-ipcMain.handle("resize-window", (event, { width, height, route }) => {
+interface ResizeWindowParams {
+  width?: number;
+  height?: number;
+  route?: string;
+}
+
+ipcMain.handle("resize-window", (event: IpcMainInvokeEvent, { width, height, route }: ResizeWindowParams) => {
   if (!mainWindow) return;
 
-  let newWidth, newHeight;
+  let newWidth: number, newHeight: number;
 
   switch (route) {
     case "/":
@@ -239,12 +278,26 @@ ipcMain.handle("window-is-maximized", () => {
   return mainWindow ? mainWindow.isMaximized() : false;
 });
 
-const activeCommands = new Map();
+const activeCommands: Map<string, CommandProcess> = new Map();
 
-const startCommand = async (id, command) => {
+interface CommandStartParams {
+  id: string;
+  command: string;
+}
+
+interface CommandStopParams {
+  id: string;
+}
+
+interface WatchFileParams {
+  id: string;
+  filePath: string;
+}
+
+const startCommand = async (id: string, command: string): Promise<ProjectResponse> => {
   try {
     if (activeCommands.has(id)) {
-      const { process } = activeCommands.get(id);
+      const { process } = activeCommands.get(id)!;
       process.kill();
       activeCommands.delete(id);
     }
@@ -258,6 +311,7 @@ const startCommand = async (id, command) => {
     });
 
     process.stdout.on("data", (data) => {
+      console.log(data.toString());
       if (mainWindow) {
         mainWindow.webContents.send("command-output", {
           id,
@@ -268,6 +322,7 @@ const startCommand = async (id, command) => {
     });
 
     process.stderr.on("data", (data) => {
+      console.log(data.toString());
       if (mainWindow) {
         mainWindow.webContents.send("command-output", {
           id,
@@ -292,18 +347,19 @@ const startCommand = async (id, command) => {
     return { success: true };
   } catch (error) {
     console.error("Error starting command:", error);
-    return { success: false, error: error.message };
+    const err = error as Error;
+    return { success: false, error: err.message };
   }
 };
 
-ipcMain.handle("start-command", async (event, { id, command }) => {
-  startCommand(id, command);
+ipcMain.handle("start-command", async (event: IpcMainInvokeEvent, { id, command }: CommandStartParams) => {
+  return startCommand(id, command);
 });
 
-ipcMain.handle("stop-command", async (event, { id }) => {
+ipcMain.handle("stop-command", async (event: IpcMainInvokeEvent, { id }: CommandStopParams) => {
   try {
     if (activeCommands.has(id)) {
-      const { process } = activeCommands.get(id);
+      const { process } = activeCommands.get(id)!;
       process.kill();
       activeCommands.delete(id);
       return { success: true };
@@ -311,11 +367,12 @@ ipcMain.handle("stop-command", async (event, { id }) => {
     return { success: false, error: "Command not found" };
   } catch (error) {
     console.error("Error stopping command:", error);
-    return { success: false, error: error.message };
+    const err = error as Error;
+    return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle("watch-file", async (event, { id, filePath }) => {
+ipcMain.handle("watch-file", async (event: IpcMainInvokeEvent, { id, filePath }: WatchFileParams) => {
   try {
     const tailCommand =
       process.platform === "win32"
@@ -325,20 +382,21 @@ ipcMain.handle("watch-file", async (event, { id, filePath }) => {
     return startCommand(id, tailCommand);
   } catch (error) {
     console.error("Error watching file:", error);
-    return { success: false, error: error.message };
+    const err = error as Error;
+    return { success: false, error: err.message };
   }
 });
 
-ipcMain.handle("delete-project", async (event, projectId) => {
+ipcMain.handle("delete-project", async (event: IpcMainInvokeEvent, projectId: string): Promise<ProjectResponse> => {
   try {
     const files = fs.readdirSync(userDataPath);
-    let projectFile = null;
+    let projectFile: string | null = null;
 
     for (const file of files) {
       if (file.endsWith(".json")) {
         const filePath = path.join(userDataPath, file);
         try {
-          const projectData = JSON.parse(fs.readFileSync(filePath, "utf8"));
+          const projectData: ProjectData = JSON.parse(fs.readFileSync(filePath, "utf8"));
           if (
             projectData.name.replace(/[^a-z0-9]/gi, "_").toLowerCase() ===
             projectId
@@ -361,7 +419,8 @@ ipcMain.handle("delete-project", async (event, projectId) => {
     return { success: true };
   } catch (error) {
     console.error("Error deleting project:", error);
-    return { success: false, error: error.message };
+    const err = error as Error;
+    return { success: false, error: err.message };
   }
 });
 
@@ -377,12 +436,13 @@ app.on("before-quit", () => {
 });
 
 // Open external URLs in default browser
-ipcMain.handle("open-external-url", async (event, url) => {
+ipcMain.handle("open-external-url", async (event: IpcMainInvokeEvent, url: string) => {
   try {
     await shell.openExternal(url);
     return { success: true };
   } catch (error) {
     console.error("Error opening external URL:", error);
-    return { success: false, error: error.message };
+    const err = error as Error;
+    return { success: false, error: err.message };
   }
 });

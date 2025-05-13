@@ -17,6 +17,7 @@ import {
   Tooltip,
   Alert,
   Snackbar,
+  SelectChangeEvent,
 } from "@mui/material";
 import CheckIcon from "@mui/icons-material/Check";
 import {
@@ -29,19 +30,30 @@ import { identifyLogType } from "../parsers/utils";
 import LogFormats from "../parsers/LogFormats";
 import { useTranslation } from "../i18n/i18n";
 
-const CreateProjectPage = ({ setCurrentProject }) => {
+// Types définis globalement dans react-app-env.d.ts
+interface LogTypeResult {
+  success: boolean;
+  error: string | null;
+  type: string;
+}
+
+interface CreateProjectPageProps {
+  setCurrentProject: React.Dispatch<React.SetStateAction<Project | null>>;
+}
+
+const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ setCurrentProject }) => {
   const navigate = useNavigate();
   const { mode } = useTheme();
   const { t } = useTranslation();
-  const [exampleLog, setExampleLog] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [source, setSource] = useState("command");
-  const [commandValue, setCommandValue] = useState("");
-  const [filePath, setFilePath] = useState("");
-  const [parserType, setParserType] = useState("auto");
-  const [error, setError] = useState("");
-  const [identifiedLogType, setIdentifiedLogType] = useState(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [exampleLog, setExampleLog] = useState<string>("");
+  const [projectName, setProjectName] = useState<string>("");
+  const [source, setSource] = useState<string>("command");
+  const [commandValue, setCommandValue] = useState<string>("");
+  const [filePath, setFilePath] = useState<string>("");
+  const [parserType, setParserType] = useState<string>("auto");
+  const [error, setError] = useState<string>("");
+  const [identifiedLogType, setIdentifiedLogType] = useState<LogTypeResult | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (exampleLog) {
@@ -57,11 +69,11 @@ const CreateProjectPage = ({ setCurrentProject }) => {
     }
   }, [exampleLog]);
 
-  const handleSourceChange = (event) => {
+  const handleSourceChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     setSource(event.target.value);
   };
 
-  const handleSelectFile = async () => {
+  const handleSelectFile = async (): Promise<void> => {
     try {
       const result = await window.electron.selectLogFile();
       if (!result.canceled && result.filePath) {
@@ -72,11 +84,11 @@ const CreateProjectPage = ({ setCurrentProject }) => {
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = (): void => {
     navigate("/");
   };
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (!projectName.trim()) {
       setError(t("nameRequired"));
       return;
@@ -93,7 +105,10 @@ const CreateProjectPage = ({ setCurrentProject }) => {
     }
 
     try {
+      // Création d'un objet partiel de Project avec les champs nécessaires
+      // Les autres champs seront remplis côté Electron
       const projectData = {
+        id: projectName.replace(/[^a-z0-9]/gi, "_").toLowerCase(),
         name: projectName,
         source: {
           type: source,
@@ -103,12 +118,13 @@ const CreateProjectPage = ({ setCurrentProject }) => {
           type: parserType,
         },
         lastOpened: new Date().toISOString(),
+        // Les champs path et type seront ajoutés par le backend
       };
 
-      const result = await window.electron.saveProject(projectData);
+      const result = await window.electron.saveProject(projectData as Project);
 
       if (result.success) {
-        setCurrentProject(projectData);
+        setCurrentProject(result.data || projectData as Project);
         navigate("/viewer");
       } else {
         setError(`Failed to save project: ${result.error}`);
@@ -119,7 +135,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
     }
   };
 
-  const handleSnackbarClose = () => {
+  const handleSnackbarClose = (): void => {
     setSnackbarOpen(false);
   };
 
@@ -223,8 +239,8 @@ const CreateProjectPage = ({ setCurrentProject }) => {
             labelId="parser-type-label"
             value={parserType}
             label={t("parserType")}
-            onChange={(e) => setParserType(e.target.value)}
-            disabled={parserType === "auto" && identifiedLogType?.success}
+            onChange={(e: SelectChangeEvent) => setParserType(e.target.value)}
+            disabled={parserType === "auto" && identifiedLogType?.success || false}
           >
             {LogFormats.map((format) => (
               <MenuItem key={format.value} value={format.value}>
@@ -249,7 +265,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
               size="small"
               sx={{ mb: 3 }}
               error={!!identifiedLogType && !identifiedLogType.success}
-              helperText={!!identifiedLogType && identifiedLogType.error}
+              helperText={!!identifiedLogType && identifiedLogType.error || ""}
             />
             <Alert severity="info" sx={{ mb: 3 }} variant="outlined">
               {t("autoDetectInfo")}
@@ -277,7 +293,7 @@ const CreateProjectPage = ({ setCurrentProject }) => {
           startIcon={<SaveIcon />}
           disableElevation
           size="small"
-          disabled={parserType === "auto" && !identifiedLogType?.success}
+          disabled={parserType === "auto" && !(identifiedLogType?.success || false)}
         >
           {t("saveButton")}
         </Button>

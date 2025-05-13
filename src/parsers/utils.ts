@@ -1,6 +1,12 @@
 import RegexPatterns from "./RegexPatterns";
 
-export const identifyLogType = (logLine) => {
+interface LogTypeResult {
+  success: boolean;
+  error: string | null;
+  type: string;
+}
+
+export const identifyLogType = (logLine: string): LogTypeResult => {
   const cleanLogLine = logLine.trim();
 
   for (const [type, patterns] of Object.entries(RegexPatterns)) {

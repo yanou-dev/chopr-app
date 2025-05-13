@@ -1,9 +1,13 @@
-export default {
+interface RegexPatternMap {
+  [key: string]: RegExp[];
+}
+
+const RegexPatterns: RegexPatternMap = {
   json: [
     /^\s*\{(?:"[^"]*"\s*:\s*(?:"[^"]*"|[^,{}]*|null|true|false|\[[^\]]*\]|\{[^{}]*\})|.*)*\}\s*$/i,
   ],
   log4j: [
-    /^(?<date>\d{4}-\d{2}-\d{2})\s+(?<time>\d{1,2}:\d{2}:\d{2}(?:\.|,\d{1,3})?)\s+(?<level>INFO|DEBUG|WARN|ERROR|FATAL)\s+\[(?<thread>.*?)\]\s+(?<class>[a-zA-Z0-9._$]+)(?:\s+-\s+(?<message>.*))?$/,
+    /^(?<date>\d{4}-\d{2}-\d{2})\s+(?<time>\d{1,2}:\d{2}:\d{2}(?:\.|,\d{1,3})?)\s+(?<level>INFO|DEBUG|WARN|ERROR|FATAL)\s+\[(?<class>.*?)\]\s+-\s+(?<message>.*)$/,
   ],
   logback: [
     /^(?<date>\d{4}-\d{2}-\d{2})\s+(?<time>\d{2}:\d{2}:\d{2}\.\d{3})\s+(?<level>[A-Z]+)\s+(?<logger>[\w\.]+(?:\.[\w\.]+)*)\s+-\s+(?<message>.*)$/,
@@ -69,3 +73,5 @@ export default {
     /^(?<host>[^ ]+) (?<identity>[^ ]+) (?<user>[^ ]+) \[(?<time>[^\]]+)\] "(?<request>[^"]+)" (?<status>[0-9]{3}) (?<size>[0-9]+|-)$/,
   ],
 };
+
+export default RegexPatterns;

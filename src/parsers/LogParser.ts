@@ -1,29 +1,29 @@
-import BaseParser from "./BaseParser";
+import BaseParser, { Column, LogEntry } from "./BaseParser";
 import RegexPatterns from "./RegexPatterns";
 
 class LogParser extends BaseParser {
-  constructor(type) {
+  private type: string;
+  private _cachedColumns?: Column[];
+
+  constructor(type: string) {
     super();
     this.type = type;
   }
 
-  get id() {
+  get id(): string {
     return this.type;
   }
 
-  getColumns() {
+  getColumns(): Column[] {
     return this._cachedColumns || [];
   }
 
-  updateColumns(parsedData) {
+  updateColumns(parsedData: Record<string, any> | null | undefined): Column[] {
     if (!this._cachedColumns) {
       this._cachedColumns = [];
     }
 
-    if (!parsedData) return;
-
-    const allKeys = new Set();
-    Object.keys(parsedData).forEach((key) => allKeys.add(key));
+    if (!parsedData) return this._cachedColumns;
 
     let columnsChanged = false;
     const existingIds = new Set(this._cachedColumns.map((col) => col.id));
@@ -31,7 +31,7 @@ class LogParser extends BaseParser {
     Object.keys(parsedData).forEach((key) => {
       if (!existingIds.has(key)) {
         columnsChanged = true;
-        this._cachedColumns.push({
+        this._cachedColumns!.push({
           id: key,
           label: key,
           width: "auto",
@@ -46,9 +46,9 @@ class LogParser extends BaseParser {
     return this._cachedColumns;
   }
 
-  parseLines(lines) {
+  parseLines(lines: string): LogEntry[] {
     const linesArray = lines.split("\n").filter((line) => line !== "");
-    let logsArray = [];
+    let logsArray: LogEntry[] = [];
     for (const line of linesArray) {
       try {
         const logLine = line
@@ -57,8 +57,12 @@ class LogParser extends BaseParser {
           .trim();
 
         const patterns = RegexPatterns[this.type];
+        
+        if (!patterns) {
+          throw new Error(`Pas de patterns définis pour le type: ${this.type}`);
+        }
 
-        let match = null;
+        let match: RegExpMatchArray | null = null;
 
         for (const pattern of patterns) {
           if (logLine !== "") {
@@ -74,16 +78,17 @@ class LogParser extends BaseParser {
           throw new Error("Format non compatible");
         }
 
-        this.updateColumns(match.groups);
+        this.updateColumns(match.groups || {});
 
         logsArray.push({
           ...match.groups,
         });
       } catch (e) {
+        const error = e as Error;
         logsArray.push({
           error: true,
           raw: line,
-          message: e.message,
+          message: error.message,
         });
       }
     }
