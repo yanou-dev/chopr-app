@@ -5,15 +5,34 @@
   "main": "build/electron.js",
   "homepage": "./",
   "scripts": {
-    "dev": "NODE_ENV=development concurrently \"npm run dev:electron\" \"npm run dev:react\"",
+    "dev": "cross-env NODE_ENV=development concurrently \"npm run dev:electron\" \"npm run dev:react\"",
     "dev:electron": "tsc -p electron.tsconfig.json && electron .",
     "dev:react": "cross-env BROWSER=none react-app-rewired start",
-    "electron:build": "NODE_ENV=production npm run build && electron-builder",
+    "electron:build": "cross-env NODE_ENV=production npm run build && electron-builder -mwl",
     "build": "react-app-rewired build && tsc -p electron.tsconfig.json",
     "check-types": "tsc --noEmit",
     "test": "react-app-rewired test",
     "postinstall": "patch-package"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanou-dev/chopr-app.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yanou-dev/chopr-app/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/yanou-dev"
+  },
+  "keywords": [
+    "logs",
+    "visualization",
+    "desktop",
+    "electron",
+    "react",
+    "typescript"
+  ],
   "build": {
     "appId": "dev.yanou.Chopr",
     "productName": "Chopr",
@@ -28,32 +47,90 @@
     "mac": {
       "icon": "public/AppIcon.icns",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64",
+            "universal"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "darkModeSupport": true,
+      "electronLanguages": [
+        "en",
+        "fr"
       ]
     },
     "win": {
-      "icon": "public/AppIcon.icns",
+      "icon": "public/AppIcon.ico",
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "publisherName": "yanou.dev()",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "electronLanguages": [
+        "en",
+        "fr"
       ]
     },
     "linux": {
       "icon": "public/AppIcon.icns",
       "target": [
-        "AppImage",
-        "deb"
+        {
+          "target": "AppImage",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "synopsis": "A modern desktop application for visualizing logs",
+      "description": "A modern desktop application for visualizing logs from various sources",
+      "desktop": {
+        "Name": "Chopr",
+        "Comment": "Log visualization tool",
+        "Categories": "Utility;Development"
+      },
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "electronLanguages": [
+        "en",
+        "fr"
       ]
     },
     "dmg": {
-      "icon": "public/AppIcon.icns"
+      "icon": "public/AppIcon.icns",
+      "title": "${productName}"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Chopr",
+      "menuCategory": "Chopr"
+    },
+    "appImage": {
+      "license": "LICENSE.md",
+      "category": "Utility"
     }
   },
-  "author": "",
+  "author": "yanou.dev() <yanis.kerriou@gmail.com> (https://yanou.dev)",
   "license": "MIT",
   "dependencies": {
     "@emotion/react": "^11.11.0",
@@ -96,5 +173,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "private": false
 }
