@@ -25,6 +25,7 @@ let mainWindow: BrowserWindow | null;
 
 interface CommandProcess {
   process: ChildProcess;
+  cleanupResources?: () => void;
 }
 
 interface ProjectData {
@@ -368,15 +369,18 @@ const startCommand = async (
   command: string
 ): Promise<ProjectResponse> => {
   try {
+    console.log(`Starting command with ID ${id}: ${command}`);
     if (activeCommands.has(id)) {
       const { process } = activeCommands.get(id)!;
       process.kill();
       activeCommands.delete(id);
+      console.log(`Killed existing command with ID ${id}`);
     }
 
     let childProcess;
     
     if (process.platform === "win32") {
+      console.log(`Using PowerShell to execute command on Windows`);
       // Sur Windows, utiliser PowerShell pour exécuter les commandes
       childProcess = spawn("powershell.exe", ["-Command", command], {
         detached: false,
@@ -400,6 +404,7 @@ const startCommand = async (
           data: data.toString(),
           type: "stdout",
         });
+        console.log(`Command ${id} stdout: ${data.toString().substring(0, 100)}${data.toString().length > 100 ? '...' : ''}`);
       }
     });
 
@@ -410,6 +415,7 @@ const startCommand = async (
           data: data.toString(),
           type: "stderr",
         });
+        console.error(`Command ${id} stderr: ${data.toString().substring(0, 100)}${data.toString().length > 100 ? '...' : ''}`);
       }
     });
 
@@ -457,7 +463,17 @@ ipcMain.handle(
   async (event: IpcMainInvokeEvent, { id }: CommandStopParams) => {
     try {
       if (activeCommands.has(id)) {
-        const { process } = activeCommands.get(id)!;
+        const { process, cleanupResources } = activeCommands.get(id)!;
+        
+        // Nettoyer d'abord les ressources supplémentaires si elles existent
+        if (cleanupResources) {
+          try {
+            cleanupResources();
+          } catch (e) {
+            console.error(`Error cleaning up resources for command ID: ${id}`, e);
+          }
+        }
+        
         process.kill("SIGTERM");
 
         setTimeout(() => {
@@ -489,10 +505,13 @@ ipcMain.handle(
   "watch-file",
   async (event: IpcMainInvokeEvent, { id, filePath }: WatchFileParams) => {
     try {
+      console.log(`Attempting to watch file: ${filePath}`);
       // Si le fichier existe, d'abord envoyer son contenu en une seule fois
       if (fs.existsSync(filePath)) {
+        console.log(`File exists, reading content: ${filePath}`);
         const fileContent = fs.readFileSync(filePath, "utf-8");
         const lines = fileContent.split(/\r?\n/);
+        console.log(`File read successfully, ${lines.length} lines found`);
 
         if (mainWindow) {
           // Envoyer le contenu du fichier en une seule fois pour un traitement efficace
@@ -500,16 +519,73 @@ ipcMain.handle(
             id,
             lines,
           });
+          console.log(`Sent file content to renderer`);
         }
+      } else {
+        console.log(`File does not exist: ${filePath}`);
       }
 
-      // Puis écouter les nouvelles lignes seulement
-      const tailCommand =
-        process.platform === "win32"
-          ? `Get-Content -Path '${filePath}' -Wait -Tail 0`
-          : `tail -f -n 0 "${filePath}"`;
-
-      return startCommand(id, tailCommand);
+      // Utiliser fs.watch pour toutes les plateformes
+      console.log(`Using fs.watch for file watching on all platforms`);
+      
+      // Taille actuelle du fichier pour suivre les modifications
+      let currentSize = fs.existsSync(filePath) ? fs.statSync(filePath).size : 0;
+      
+      const watcher = fs.watch(filePath, (eventType) => {
+        if (eventType === 'change') {
+          try {
+            // Lire les nouvelles données depuis le point précédent
+            const stats = fs.statSync(filePath);
+            
+            // Si le fichier a été tronqué, réinitialiser la taille
+            if (stats.size < currentSize) {
+              currentSize = 0;
+            }
+            
+            // Lire seulement les nouvelles données
+            if (stats.size > currentSize) {
+              const fd = fs.openSync(filePath, 'r');
+              const buffer = Buffer.alloc(stats.size - currentSize);
+              fs.readSync(fd, buffer, 0, stats.size - currentSize, currentSize);
+              fs.closeSync(fd);
+              
+              const newContent = buffer.toString();
+              
+              if (newContent && mainWindow) {
+                mainWindow.webContents.send("command-output", {
+                  id,
+                  data: newContent,
+                  type: "stdout",
+                });
+              }
+              
+              currentSize = stats.size;
+            }
+          } catch (error) {
+            console.error(`Error reading file changes: ${error}`);
+          }
+        }
+      });
+      
+      // Garder une référence au watcher pour pouvoir le fermer plus tard
+      const cleanupWatcher = () => {
+        console.log(`Cleaning up watcher for ${filePath}`);
+        watcher.close();
+      };
+      
+      // Créer un processus virtuel pour pouvoir utiliser le système de commandes existant
+      const dummyProcess = { 
+        kill: () => { cleanupWatcher(); },
+        on: () => {}
+      } as unknown as ChildProcess;
+      
+      // Enregistrer dans les commandes actives
+      activeCommands.set(id, { 
+        process: dummyProcess,
+        cleanupResources: cleanupWatcher
+      });
+      
+      return { success: true };
     } catch (error) {
       console.error("Error watching file:", error);
       const err = error as Error;
