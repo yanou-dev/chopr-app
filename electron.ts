@@ -71,9 +71,13 @@ function createWindow(): void {
     minWidth: 600,
     minHeight: 500,
     center: true,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#1e1e1e",
     frame: false,
     titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#1e1e1e",
+      symbolColor: "#f5f5f5",
+    },
     trafficLightPosition: { x: 10, y: 10 },
   });
 
