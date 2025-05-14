@@ -153,7 +153,7 @@
     "concurrently": "^8.2.0",
     "cross-env": "^7.0.3",
     "customize-cra": "^1.0.0",
-    "electron": "^25.3.0",
+    "electron": "^36.2.0",
     "electron-builder": "^24.4.0",
     "jest": "^27.5.1",
     "patch-package": "^8.0.0",
