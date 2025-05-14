@@ -41,7 +41,9 @@ interface CreateProjectPageProps {
   setCurrentProject: React.Dispatch<React.SetStateAction<Project | null>>;
 }
 
-const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ setCurrentProject }) => {
+const CreateProjectPage: React.FC<CreateProjectPageProps> = ({
+  setCurrentProject,
+}) => {
   const navigate = useNavigate();
   const { mode } = useTheme();
   const { t } = useTranslation();
@@ -52,7 +54,8 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ setCurrentProject
   const [filePath, setFilePath] = useState<string>("");
   const [parserType, setParserType] = useState<string>("auto");
   const [error, setError] = useState<string>("");
-  const [identifiedLogType, setIdentifiedLogType] = useState<LogTypeResult | null>(null);
+  const [identifiedLogType, setIdentifiedLogType] =
+    useState<LogTypeResult | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
 
   useEffect(() => {
@@ -69,7 +72,9 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ setCurrentProject
     }
   }, [exampleLog]);
 
-  const handleSourceChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleSourceChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ): void => {
     setSource(event.target.value);
   };
 
@@ -78,6 +83,18 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ setCurrentProject
       const result = await window.electron.selectLogFile();
       if (!result.canceled && result.filePath) {
         setFilePath(result.filePath);
+
+        // Auto-détection du format à partir du contenu échantillon
+        if (result.sampleContent) {
+          const detectionResult = identifyLogType(result.sampleContent);
+          if (detectionResult.success) {
+            setParserType(detectionResult.type);
+            setIdentifiedLogType(null);
+            setSnackbarOpen(true);
+          } else {
+            setIdentifiedLogType(detectionResult);
+          }
+        }
       }
     } catch (error) {
       console.error("Error selecting log file:", error);
@@ -124,7 +141,7 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ setCurrentProject
       const result = await window.electron.saveProject(projectData as Project);
 
       if (result.success) {
-        setCurrentProject(result.data || projectData as Project);
+        setCurrentProject(result.data || (projectData as Project));
         navigate("/viewer");
       } else {
         setError(`Failed to save project: ${result.error}`);
@@ -240,7 +257,9 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ setCurrentProject
             value={parserType}
             label={t("parserType")}
             onChange={(e: SelectChangeEvent) => setParserType(e.target.value)}
-            disabled={parserType === "auto" && identifiedLogType?.success || false}
+            disabled={
+              (parserType === "auto" && identifiedLogType?.success) || false
+            }
           >
             {LogFormats.map((format) => (
               <MenuItem key={format.value} value={format.value}>
@@ -265,7 +284,9 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ setCurrentProject
               size="small"
               sx={{ mb: 3 }}
               error={!!identifiedLogType && !identifiedLogType.success}
-              helperText={!!identifiedLogType && identifiedLogType.error || ""}
+              helperText={
+                (!!identifiedLogType && identifiedLogType.error) || ""
+              }
             />
             <Alert severity="info" sx={{ mb: 3 }} variant="outlined">
               {t("autoDetectInfo")}
@@ -293,7 +314,9 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ setCurrentProject
           startIcon={<SaveIcon />}
           disableElevation
           size="small"
-          disabled={parserType === "auto" && !(identifiedLogType?.success || false)}
+          disabled={
+            parserType === "auto" && !(identifiedLogType?.success || false)
+          }
         >
           {t("saveButton")}
         </Button>

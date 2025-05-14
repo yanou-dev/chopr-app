@@ -56,7 +56,11 @@ interface Window {
     readFile: (path: string) => Promise<string>;
     saveFile: (content: string, defaultPath?: string) => Promise<string | null>;
     showDialog: (options: any) => Promise<any>;
-    selectLogFile: () => Promise<{ canceled: boolean; filePath?: string }>;
+    selectLogFile: () => Promise<{
+      canceled: boolean;
+      filePath?: string;
+      sampleContent?: string;
+    }>;
     selectProjectFile: () => Promise<{ canceled: boolean; filePath?: string }>;
 
     // Gestion de projet

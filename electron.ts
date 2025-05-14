@@ -57,6 +57,7 @@ interface ProjectResponse {
 interface FileSelectResponse {
   canceled: boolean;
   filePath?: string;
+  sampleContent?: string;
 }
 
 function createWindow(): void {
@@ -271,16 +272,71 @@ ipcMain.handle("select-project-file", async (): Promise<FileSelectResponse> => {
 });
 
 ipcMain.handle("select-log-file", async (): Promise<FileSelectResponse> => {
-  const result = await dialog.showOpenDialog(mainWindow!, {
-    properties: ["openFile"],
-    filters: [{ name: "Log Files", extensions: ["log", "txt"] }],
-  });
+  let filePath = "";
+  try {
+    const result = await dialog.showOpenDialog(mainWindow!, {
+      properties: ["openFile"],
+      filters: [{ name: "Log Files", extensions: ["log", "txt"] }],
+    });
 
-  if (result.canceled) {
-    return { canceled: true };
+    if (result.canceled) {
+      return { canceled: true };
+    }
+
+    filePath = result.filePaths[0];
+
+    if (fs.existsSync(filePath)) {
+      try {
+        const stats = fs.statSync(filePath);
+        const maxSize = 1024 * 1024; // 1 Mo
+
+        if (stats.size > maxSize) {
+          const fd = fs.openSync(filePath, "r");
+          const buffer = Buffer.alloc(10000);
+          fs.readSync(fd, buffer, 0, 10000, 0);
+          fs.closeSync(fd);
+
+          const sampleContent = buffer
+            .toString("utf-8")
+            .split(/\r?\n/)
+            .filter((line) => line.trim() !== "")
+            .slice(0, 5)
+            .join("\n");
+
+          return {
+            canceled: false,
+            filePath: filePath,
+            sampleContent: sampleContent,
+          };
+        } else {
+          const fileContent = fs.readFileSync(filePath, "utf-8");
+          const lines = fileContent
+            .split(/\r?\n/)
+            .filter((line) => line.trim() !== "")
+            .slice(0, 5);
+          const sampleContent = lines.join("\n");
+
+          return {
+            canceled: false,
+            filePath: filePath,
+            sampleContent: sampleContent,
+          };
+        }
+      } catch (fileError) {
+        console.error("Error processing file content:", fileError);
+        return { canceled: false, filePath: filePath };
+      }
+    }
+  } catch (error) {
+    console.error("Error in select-log-file:", error);
+    if (filePath) {
+      return { canceled: false, filePath: filePath };
+    }
   }
 
-  return { canceled: false, filePath: result.filePaths[0] };
+  return filePath
+    ? { canceled: false, filePath: filePath }
+    : { canceled: true };
 });
 
 interface ResizeWindowParams {
