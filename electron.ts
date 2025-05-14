@@ -524,14 +524,16 @@ ipcMain.handle(
         const lines = fileContent.split(/\r?\n/);
         console.log(`File read successfully, ${lines.length} lines found`);
 
-        if (mainWindow) {
-          // Envoyer le contenu du fichier en une seule fois pour un traitement efficace
-          mainWindow.webContents.send("file-output", {
-            id,
-            lines,
-          });
-          console.log(`Sent file content to renderer`);
-        }
+        setTimeout(() => {
+          if (mainWindow) {
+            // Envoyer le contenu du fichier en une seule fois pour un traitement efficace
+            mainWindow.webContents.send("file-output", {
+              id,
+              lines,
+            });
+            console.log(`Sent file content to renderer`);
+          }
+        }, 500);
       } else {
         console.log(`File does not exist: ${filePath}`);
       }
