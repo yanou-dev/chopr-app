@@ -49,7 +49,7 @@ const translations: Translations = {
     loadingProjects: "Loading recent projects...",
     noRecentProjects:
       "No recent projects found. Create a new project to get started.",
-    feedbackButton: "Feedback",
+    feedbackButton: "About",
 
     // Page de création de projet
     createProjectTitle: "Create a New Project",
@@ -118,7 +118,7 @@ const translations: Translations = {
     loadingProjects: "Chargement des projets récents...",
     noRecentProjects:
       "Aucun projet récent trouvé. Créez un nouveau projet pour commencer.",
-    feedbackButton: "Feedback",
+    feedbackButton: "À propos",
     // Page de création de projet
     createProjectTitle: "Créer un nouveau projet",
     projectName: "Nom du projet",

@@ -293,9 +293,7 @@ const HomePage: React.FC<HomePageProps> = ({ setCurrentProject }) => {
               variant="text"
               size="small"
               onClick={() =>
-                window.electron.openExternalUrl(
-                  "https://github.com/yanouhd/chopr/issues"
-                )
+                window.electron.openExternalUrl("https://chopr.dev")
               }
               sx={{ minWidth: "auto" }}
             >
