@@ -350,7 +350,6 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
 
       const unsubscribeCommand = window.electron.onCommandOutput(
         (data: CommandOutputData) => {
-          console.log("COMMAND OUTPUT");
           if (data.id === id) {
             if (!data.data || data.data.trim() === "") return;
 
@@ -383,12 +382,10 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
       // Gestionnaire pour le contenu initial du fichier (envoyé en bloc)
       const unsubscribeFile = window.electron.onFileOutput(
         (data: FileOutputData) => {
-          console.log("FILE OUTPUT");
           if (data.id === id && data.lines.length > 0) {
             try {
               // Traitement par lots pour améliorer les performances
               const newLogs: LogEntry[] = [];
-              console.log(data);
               for (const line of data.lines) {
                 if (!line || line.trim() === "") continue;
 
