@@ -475,10 +475,25 @@ ipcMain.handle(
   "watch-file",
   async (event: IpcMainInvokeEvent, { id, filePath }: WatchFileParams) => {
     try {
+      // Si le fichier existe, d'abord envoyer son contenu en une seule fois
+      if (fs.existsSync(filePath)) {
+        const fileContent = fs.readFileSync(filePath, "utf-8");
+        const lines = fileContent.split(/\r?\n/);
+
+        if (mainWindow) {
+          // Envoyer le contenu du fichier en une seule fois pour un traitement efficace
+          mainWindow.webContents.send("file-output", {
+            id,
+            lines,
+          });
+        }
+      }
+
+      // Puis écouter les nouvelles lignes seulement
       const tailCommand =
         process.platform === "win32"
-          ? `powershell -Command "Get-Content -Path '${filePath}' -Wait"`
-          : `tail +1f "${filePath}"`;
+          ? `powershell -Command "Get-Content -Path '${filePath}' -Wait -Tail 0"`
+          : `tail -f -n 0 "${filePath}"`;
 
       return startCommand(id, tailCommand);
     } catch (error) {

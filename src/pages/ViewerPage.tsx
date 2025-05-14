@@ -86,6 +86,11 @@ interface CommandOutputData {
   data: string;
 }
 
+interface FileOutputData {
+  id: string;
+  lines: string[];
+}
+
 interface ViewerPageProps {
   project: Project | null;
 }
@@ -343,8 +348,9 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
         await window.electron.watchFile(id, project!.source.value);
       }
 
-      const unsubscribe = window.electron.onCommandOutput(
+      const unsubscribeCommand = window.electron.onCommandOutput(
         (data: CommandOutputData) => {
+          console.log("COMMAND OUTPUT");
           if (data.id === id) {
             if (!data.data || data.data.trim() === "") return;
 
@@ -374,7 +380,51 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
         }
       );
 
-      return unsubscribe;
+      // Gestionnaire pour le contenu initial du fichier (envoyé en bloc)
+      const unsubscribeFile = window.electron.onFileOutput(
+        (data: FileOutputData) => {
+          console.log("FILE OUTPUT");
+          if (data.id === id && data.lines.length > 0) {
+            try {
+              // Traitement par lots pour améliorer les performances
+              const newLogs: LogEntry[] = [];
+              console.log(data);
+              for (const line of data.lines) {
+                if (!line || line.trim() === "") continue;
+
+                try {
+                  const parsedData = parser.parseLines(line);
+                  for (const log of parsedData) {
+                    newLogs.push({
+                      ...log,
+                      id: log.id || crypto.randomUUID(),
+                    });
+                  }
+                } catch (e) {
+                  newLogs.push({
+                    id: crypto.randomUUID(),
+                    level: "info",
+                    message: line.trim(),
+                    timestamp: new Date().toLocaleString(),
+                    rawTimestamp: new Date().toISOString(),
+                    rawLog: line,
+                  });
+                }
+              }
+
+              // Ajout des logs en bloc pour de meilleures performances
+              setLogs((prevLogs) => [...prevLogs, ...newLogs]);
+            } catch (e) {
+              console.error("Error processing file content:", e);
+            }
+          }
+        }
+      );
+
+      return () => {
+        unsubscribeCommand();
+        unsubscribeFile();
+      };
     } catch (error) {
       console.error("Error starting log collection:", error);
       showSnackbar(t("errorStartingLogCollection"));

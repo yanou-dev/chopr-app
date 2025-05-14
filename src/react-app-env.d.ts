@@ -30,7 +30,13 @@ interface CommandData {
   code?: number;
 }
 
+interface FileOutputData {
+  id: string;
+  lines: string[];
+}
+
 type CommandCallback = (data: CommandData) => void;
+type FileOutputCallback = (data: FileOutputData) => void;
 
 interface Window {
   electron: {
@@ -72,6 +78,7 @@ interface Window {
       filePath: string
     ) => Promise<{ success: boolean; error?: string }>;
     onCommandOutput: (callback: CommandCallback) => () => void;
+    onFileOutput: (callback: FileOutputCallback) => () => void;
     onCommandClosed: (callback: CommandCallback) => () => void;
 
     // Divers

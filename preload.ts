@@ -1,12 +1,18 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
 
 type CommandCallback = (data: CommandData) => void;
+type FileOutputCallback = (data: FileOutputData) => void;
 
 interface CommandData {
   id: string;
   data: string;
   type?: string;
   code?: number;
+}
+
+interface FileOutputData {
+  id: string;
+  lines: string[];
 }
 
 interface ProjectData {
@@ -53,6 +59,15 @@ contextBridge.exposeInMainWorld("electron", {
     ipcRenderer.on("command-output", subscription);
     return () => {
       ipcRenderer.removeListener("command-output", subscription);
+    };
+  },
+
+  onFileOutput: (callback: FileOutputCallback) => {
+    const subscription = (event: IpcRendererEvent, data: FileOutputData) =>
+      callback(data);
+    ipcRenderer.on("file-output", subscription);
+    return () => {
+      ipcRenderer.removeListener("file-output", subscription);
     };
   },
 
