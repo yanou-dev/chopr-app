@@ -374,16 +374,26 @@ const startCommand = async (
       activeCommands.delete(id);
     }
 
-    const parts = command.split(" ");
-    const cmd = parts[0];
-    const args = parts.slice(1);
+    let childProcess;
+    
+    if (process.platform === "win32") {
+      // Sur Windows, utiliser PowerShell pour exécuter les commandes
+      childProcess = spawn("powershell.exe", ["-Command", command], {
+        detached: false,
+      });
+    } else {
+      // Sur Unix, continuer avec la méthode actuelle
+      const parts = command.split(" ");
+      const cmd = parts[0];
+      const args = parts.slice(1);
+      
+      childProcess = spawn(cmd, args, {
+        shell: true,
+        detached: false,
+      });
+    }
 
-    const process = spawn(cmd, args, {
-      shell: true,
-      detached: false,
-    });
-
-    process.stdout.on("data", (data) => {
+    childProcess.stdout.on("data", (data) => {
       if (mainWindow) {
         mainWindow.webContents.send("command-output", {
           id,
@@ -393,7 +403,7 @@ const startCommand = async (
       }
     });
 
-    process.stderr.on("data", (data) => {
+    childProcess.stderr.on("data", (data) => {
       if (mainWindow) {
         mainWindow.webContents.send("command-output", {
           id,
@@ -403,7 +413,7 @@ const startCommand = async (
       }
     });
 
-    process.on("close", (code) => {
+    childProcess.on("close", (code) => {
       if (mainWindow) {
         mainWindow.webContents.send("command-closed", {
           id,
@@ -413,7 +423,7 @@ const startCommand = async (
       activeCommands.delete(id);
     });
 
-    process.on("error", (err) => {
+    childProcess.on("error", (err) => {
       console.error(`Command error for ID: ${id}`, err);
       if (mainWindow) {
         mainWindow.webContents.send("command-closed", {
@@ -425,7 +435,7 @@ const startCommand = async (
       activeCommands.delete(id);
     });
 
-    activeCommands.set(id, { process });
+    activeCommands.set(id, { process: childProcess });
 
     return { success: true };
   } catch (error) {
@@ -496,7 +506,7 @@ ipcMain.handle(
       // Puis écouter les nouvelles lignes seulement
       const tailCommand =
         process.platform === "win32"
-          ? `powershell -Command "Get-Content -Path '${filePath}' -Wait -Tail 0"`
+          ? `Get-Content -Path '${filePath}' -Wait -Tail 0`
           : `tail -f -n 0 "${filePath}"`;
 
       return startCommand(id, tailCommand);
