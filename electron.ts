@@ -512,6 +512,8 @@ ipcMain.handle(
   }
 );
 
+const initialFileContents = new Map<string, { id: string; lines: string[] }>();
+
 ipcMain.handle(
   "watch-file",
   async (event: IpcMainInvokeEvent, { id, filePath }: WatchFileParams) => {
@@ -524,16 +526,28 @@ ipcMain.handle(
         const lines = fileContent.split(/\r?\n/);
         console.log(`File read successfully, ${lines.length} lines found`);
 
-        setTimeout(() => {
+        // On stocke les lignes en mémoire pour les envoyer quand le renderer sera prêt
+        const initialFileContent = {
+          id,
+          lines,
+        };
+
+        // Créer un gestionnaire pour envoyer le contenu initial quand le renderer est prêt
+        const sendInitialContent = () => {
           if (mainWindow) {
-            // Envoyer le contenu du fichier en une seule fois pour un traitement efficace
-            mainWindow.webContents.send("file-output", {
-              id,
-              lines,
-            });
+            mainWindow.webContents.send("file-output", initialFileContent);
             console.log(`Sent file content to renderer`);
           }
-        }, 500);
+        };
+
+        // Enregistrer le gestionnaire pour cet ID
+        ipcMain.handleOnce(`viewer-ready-${id}`, () => {
+          sendInitialContent();
+          return true;
+        });
+
+        // Sauvegarder une référence au contenu initial pour l'envoyer plus tard si nécessaire
+        initialFileContents.set(id, initialFileContent);
       } else {
         console.log(`File does not exist: ${filePath}`);
       }

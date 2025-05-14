@@ -52,6 +52,7 @@ contextBridge.exposeInMainWorld("electron", {
   stopCommand: (id: string) => ipcRenderer.invoke("stop-command", { id }),
   watchFile: (id: string, filePath: string) =>
     ipcRenderer.invoke("watch-file", { id, filePath }),
+  notifyViewerReady: (id: string) => ipcRenderer.invoke(`viewer-ready-${id}`),
 
   onCommandOutput: (callback: CommandCallback) => {
     const subscription = (event: IpcRendererEvent, data: CommandData) =>

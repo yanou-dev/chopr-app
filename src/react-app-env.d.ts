@@ -80,6 +80,7 @@ interface Window {
     onCommandOutput: (callback: CommandCallback) => () => void;
     onFileOutput: (callback: FileOutputCallback) => () => void;
     onCommandClosed: (callback: CommandCallback) => () => void;
+    notifyViewerReady: (id: string) => () => void;
 
     // Divers
     openExternalUrl: (

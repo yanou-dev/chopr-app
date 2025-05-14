@@ -418,6 +418,13 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
         }
       );
 
+      // Notifier le processus principal que le renderer est prêt à recevoir des données
+      // (seulement pour les fichiers, car les commandes envoient des données au fur et à mesure)
+      if (project!.source.type === "file") {
+        // Légère pause pour s'assurer que tous les gestionnaires sont bien configurés
+        await window.electron.notifyViewerReady(id);
+      }
+
       return () => {
         unsubscribeCommand();
         unsubscribeFile();
