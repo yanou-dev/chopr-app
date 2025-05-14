@@ -30,7 +30,6 @@ import { identifyLogType } from "../parsers/utils";
 import LogFormats from "../parsers/LogFormats";
 import { useTranslation } from "../i18n/i18n";
 
-// Types définis globalement dans react-app-env.d.ts
 interface LogTypeResult {
   success: boolean;
   error: string | null;
@@ -84,7 +83,6 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({
       if (!result.canceled && result.filePath) {
         setFilePath(result.filePath);
 
-        // Auto-détection du format à partir du contenu échantillon
         if (result.sampleContent) {
           const detectionResult = identifyLogType(result.sampleContent);
           if (detectionResult.success) {
@@ -122,8 +120,6 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({
     }
 
     try {
-      // Création d'un objet partiel de Project avec les champs nécessaires
-      // Les autres champs seront remplis côté Electron
       const projectData = {
         id: projectName.replace(/[^a-z0-9]/gi, "_").toLowerCase(),
         name: projectName,
@@ -135,7 +131,6 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({
           type: parserType,
         },
         lastOpened: new Date().toISOString(),
-        // Les champs path et type seront ajoutés par le backend
       };
 
       const result = await window.electron.saveProject(projectData as Project);

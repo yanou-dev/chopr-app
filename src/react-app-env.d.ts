@@ -40,7 +40,6 @@ type FileOutputCallback = (data: FileOutputData) => void;
 
 interface Window {
   electron: {
-    // Navigation et fenêtre
     resizeWindow: (
       width: number | null,
       height: number | null,
@@ -51,7 +50,6 @@ interface Window {
     closeWindow: () => Promise<boolean>;
     isWindowMaximized: () => Promise<boolean>;
 
-    // Opérations de fichier
     openFile: () => Promise<string | null>;
     readFile: (path: string) => Promise<string>;
     saveFile: (content: string, defaultPath?: string) => Promise<string | null>;
@@ -63,7 +61,6 @@ interface Window {
     }>;
     selectProjectFile: () => Promise<{ canceled: boolean; filePath?: string }>;
 
-    // Gestion de projet
     getRecentProjects: () => Promise<Project[]>;
     saveProject: (projectData: Project) => Promise<ProjectResponse>;
     loadProject: (filePath: string) => Promise<ProjectResponse>;
@@ -71,7 +68,6 @@ interface Window {
     deleteProject: (projectId: string) => Promise<ProjectResponse>;
     getVersion: () => Promise<string>;
 
-    // Gestion des commandes et logs
     startCommand: (
       id: string,
       command: string
@@ -86,7 +82,6 @@ interface Window {
     onCommandClosed: (callback: CommandCallback) => () => void;
     notifyViewerReady: (id: string) => () => void;
 
-    // Divers
     openExternalUrl: (
       url: string
     ) => Promise<{ success: boolean; error?: string }>;

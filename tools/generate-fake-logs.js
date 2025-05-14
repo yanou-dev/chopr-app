@@ -1,7 +1,6 @@
 const fs = require("fs");
 const { program } = require("commander");
 
-// Liste de niveaux de log, messages et composants fictifs
 const logLevels = ["INFO", "WARN", "ERROR", "DEBUG"];
 const components = [
   "UserService",
@@ -21,7 +20,6 @@ const messages = [
   "Unexpected exception occurred",
 ];
 
-// Fonction pour générer une date aléatoire dans les dernières 24h avec millisecondes
 function getRandomDate() {
   const now = new Date();
   const randomMs = Math.floor(Math.random() * 24 * 60 * 60 * 1000);
@@ -31,23 +29,20 @@ function getRandomDate() {
   return `${isoString},${milliseconds}`;
 }
 
-// Fonction pour générer une ligne de log au format Log4j
 function generateLogLine() {
   const timestamp = getRandomDate();
   const level = logLevels[Math.floor(Math.random() * logLevels.length)];
   const component = components[Math.floor(Math.random() * components.length)];
   const message = messages[Math.floor(Math.random() * messages.length)];
   const thread = `Thread-${Math.floor(Math.random() * 100)}`;
-  // Utiliser uniquement le dernier segment du logger (comme %c{1})
+
   const logger = component;
 
-  // Aligner le niveau de log à 5 caractères
   const paddedLevel = level.padEnd(5, " ");
 
   return `${timestamp} ${paddedLevel} [${thread}] ${logger} - ${message}\n`;
 }
 
-// Configuration de la ligne de commande
 program
   .version("1.0.0")
   .description("Génère un fichier de faux logs Java Log4j")
@@ -68,12 +63,10 @@ if (isNaN(numLines) || numLines <= 0) {
   process.exit(1);
 }
 
-// Génération des logs
 let logContent = "";
 for (let i = 0; i < numLines; i++) {
   logContent += generateLogLine();
 }
 
-// Écriture dans le fichier
 fs.writeFileSync(outputFile, logContent, "utf8");
 console.log(`Fichier ${outputFile} généré avec ${numLines} lignes de logs`);

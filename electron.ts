@@ -90,7 +90,7 @@ function createWindow(): void {
   mainWindow.loadURL(startUrl);
 
   mainWindow.once("ready-to-show", () => {
-    const initialRoute = "/"; // Route par défaut
+    const initialRoute = "/";
     let width = 800;
     let height = 600;
 
@@ -311,7 +311,7 @@ ipcMain.handle("select-log-file", async (): Promise<FileSelectResponse> => {
     if (fs.existsSync(filePath)) {
       try {
         const stats = fs.statSync(filePath);
-        const maxSize = 1024 * 1024; // 1 Mo
+        const maxSize = 1024 * 1024;
 
         if (stats.size > maxSize) {
           const fd = fs.openSync(filePath, "r");
@@ -460,12 +460,11 @@ const startCommand = async (
 
     if (process.platform === "win32") {
       console.log(`Using PowerShell to execute command on Windows`);
-      // Sur Windows, utiliser PowerShell pour exécuter les commandes
+
       childProcess = spawn("powershell.exe", ["-Command", command], {
         detached: false,
       });
     } else {
-      // Sur Unix, continuer avec la méthode actuelle
       const parts = command.split(" ");
       const cmd = parts[0];
       const args = parts.slice(1);
@@ -552,7 +551,6 @@ ipcMain.handle(
       if (activeCommands.has(id)) {
         const { process, cleanupResources } = activeCommands.get(id)!;
 
-        // Nettoyer d'abord les ressources supplémentaires si elles existent
         if (cleanupResources) {
           try {
             cleanupResources();
@@ -598,20 +596,18 @@ ipcMain.handle(
   async (event: IpcMainInvokeEvent, { id, filePath }: WatchFileParams) => {
     try {
       console.log(`Attempting to watch file: ${filePath}`);
-      // Si le fichier existe, d'abord envoyer son contenu en une seule fois
+
       if (fs.existsSync(filePath)) {
         console.log(`File exists, reading content: ${filePath}`);
         const fileContent = fs.readFileSync(filePath, "utf-8");
         const lines = fileContent.split(/\r?\n/);
         console.log(`File read successfully, ${lines.length} lines found`);
 
-        // On stocke les lignes en mémoire pour les envoyer quand le renderer sera prêt
         const initialFileContent = {
           id,
           lines,
         };
 
-        // Créer un gestionnaire pour envoyer le contenu initial quand le renderer est prêt
         const sendInitialContent = () => {
           if (mainWindow) {
             mainWindow.webContents.send("file-output", initialFileContent);
@@ -619,22 +615,18 @@ ipcMain.handle(
           }
         };
 
-        // Enregistrer le gestionnaire pour cet ID
         ipcMain.handleOnce(`viewer-ready-${id}`, () => {
           sendInitialContent();
           return true;
         });
 
-        // Sauvegarder une référence au contenu initial pour l'envoyer plus tard si nécessaire
         initialFileContents.set(id, initialFileContent);
       } else {
         console.log(`File does not exist: ${filePath}`);
       }
 
-      // Utiliser fs.watch pour toutes les plateformes
       console.log(`Using fs.watch for file watching on all platforms`);
 
-      // Taille actuelle du fichier pour suivre les modifications
       let currentSize = fs.existsSync(filePath)
         ? fs.statSync(filePath).size
         : 0;
@@ -642,15 +634,12 @@ ipcMain.handle(
       const watcher = fs.watch(filePath, (eventType) => {
         if (eventType === "change") {
           try {
-            // Lire les nouvelles données depuis le point précédent
             const stats = fs.statSync(filePath);
 
-            // Si le fichier a été tronqué, réinitialiser la taille
             if (stats.size < currentSize) {
               currentSize = 0;
             }
 
-            // Lire seulement les nouvelles données
             if (stats.size > currentSize) {
               const fd = fs.openSync(filePath, "r");
               const buffer = Buffer.alloc(stats.size - currentSize);
@@ -674,13 +663,11 @@ ipcMain.handle(
         }
       });
 
-      // Garder une référence au watcher pour pouvoir le fermer plus tard
       const cleanupWatcher = () => {
         console.log(`Cleaning up watcher for ${filePath}`);
         watcher.close();
       };
 
-      // Créer un processus virtuel pour pouvoir utiliser le système de commandes existant
       const dummyProcess = {
         kill: () => {
           cleanupWatcher();
@@ -688,7 +675,6 @@ ipcMain.handle(
         on: () => {},
       } as unknown as ChildProcess;
 
-      // Enregistrer dans les commandes actives
       activeCommands.set(id, {
         process: dummyProcess,
         cleanupResources: cleanupWatcher,
@@ -775,7 +761,6 @@ app.on("before-quit", () => {
   }, 100);
 });
 
-// Open external URLs in default browser
 ipcMain.handle(
   "open-external-url",
   async (event: IpcMainInvokeEvent, url: string) => {

@@ -1,4 +1,3 @@
-// Fichier contenant toutes les traductions de l'application
 interface Translations {
   [key: string]: {
     [key: string]: string;
@@ -7,7 +6,6 @@ interface Translations {
 
 const translations: Translations = {
   en: {
-    // Barre d'outils
     columnsButton: "Columns",
     filterButton: "Filter",
     densityButton: "Density",
@@ -15,7 +13,6 @@ const translations: Translations = {
     autoScrollEnabled: "Auto-scroll enabled",
     autoScrollDisabled: "Auto-scroll disabled",
 
-    // Filtres de niveau de log
     all: "All",
     error: "Error",
     warning: "Warning",
@@ -23,7 +20,6 @@ const translations: Translations = {
     debug: "Debug",
     trace: "Trace",
 
-    // Boîte de dialogue de confirmation
     clearLogsTitle: "Clear Logs",
     clearLogsConfirmation:
       "Are you sure you want to clear all logs? This action cannot be undone.",
@@ -31,14 +27,11 @@ const translations: Translations = {
     clearButton: "Clear",
     deleteButton: "Delete",
 
-    // Notification
     logsCleared: "Logs cleared",
     errorStartingLogCollection: "Error starting log collection",
 
-    // Bas de page
     logsDisplayed: "{filtered} of {total} logs displayed",
 
-    // Page d'accueil
     welcomeTitle: "Welcome to Chopr",
     createProject: "Create Project",
     projectsList: "Your Projects",
@@ -51,7 +44,6 @@ const translations: Translations = {
       "No recent projects found. Create a new project to get started.",
     feedbackButton: "About",
 
-    // Page de création de projet
     createProjectTitle: "Create a New Project",
     projectName: "Project Name",
     projectDescription: "Description",
@@ -68,13 +60,11 @@ const translations: Translations = {
     saveButton: "Create Project",
     logTypeIdentified: "Log type identified! ({type})",
 
-    // Messages d'erreur
     nameRequired: "Project name is required",
     sourceRequired: "Source is required",
     parserRequired: "Parser type is required",
   },
   fr: {
-    // Barre d'outils
     columnsButton: "Colonnes",
     filterButton: "Filtrer",
     densityButton: "Densité",
@@ -82,7 +72,6 @@ const translations: Translations = {
     autoScrollEnabled: "Auto-scroll activé",
     autoScrollDisabled: "Auto-scroll désactivé",
 
-    // Filtres de niveau de log
     all: "Tous",
     error: "Erreur",
     warning: "Avertissement",
@@ -90,7 +79,6 @@ const translations: Translations = {
     debug: "Débogage",
     trace: "Trace",
 
-    // Boîte de dialogue de confirmation
     clearLogsTitle: "Effacer les logs",
     clearLogsConfirmation:
       "Êtes-vous sûr de vouloir effacer tous les logs ? Cette action est irréversible.",
@@ -98,15 +86,12 @@ const translations: Translations = {
     clearButton: "Effacer",
     deleteButton: "Supprimer",
 
-    // Notification
     logsCleared: "Logs effacés",
     errorStartingLogCollection:
       "Erreur lors du démarrage de la collecte de logs",
 
-    // Bas de page
     logsDisplayed: "{filtered} sur {total} logs affichés",
 
-    // Page d'accueil
     welcomeTitle: "Bienvenue sur Chopr",
     createProject: "Créer un projet",
     projectsList: "Vos projets",
@@ -119,7 +104,7 @@ const translations: Translations = {
     noRecentProjects:
       "Aucun projet récent trouvé. Créez un nouveau projet pour commencer.",
     feedbackButton: "À propos",
-    // Page de création de projet
+
     createProjectTitle: "Créer un nouveau projet",
     projectName: "Nom du projet",
     projectDescription: "Description",
@@ -136,7 +121,6 @@ const translations: Translations = {
     saveButton: "Créer le projet",
     logTypeIdentified: "Type de log identifié ! ({type})",
 
-    // Messages d'erreur
     nameRequired: "Le nom du projet est requis",
     sourceRequired: "La source est requise",
     parserRequired: "Le type d'analyseur est requis",

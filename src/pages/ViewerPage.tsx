@@ -53,7 +53,6 @@ declare module "@mui/x-data-grid-pro" {
   }
 }
 
-// Type definitions
 interface CustomToolbarProps {
   handleClearLogs: () => void;
   autoScroll: boolean;
@@ -95,7 +94,6 @@ interface ViewerPageProps {
   project: Project | null;
 }
 
-// Composant toolbar personnalisé
 function CustomToolbar(props: CustomToolbarProps) {
   const {
     handleClearLogs,
@@ -110,11 +108,9 @@ function CustomToolbar(props: CustomToolbarProps) {
 
   const { t } = useTranslation();
 
-  // Handle density change
   const handleDensityChange = (newDensity: GridDensity) => {
     setDensityLevel(newDensity);
 
-    // Force update of the DataGrid component
     if (apiRef.current) {
       apiRef.current.setDensity(newDensity);
     }
@@ -175,7 +171,6 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
       ? new JSONParser()
       : new LogParser(project?.parser?.type || "");
 
-  // State variables
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [columns, setColumns] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -232,7 +227,6 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
     }
   }, [autoScroll]);
 
-  // New scroll event handler
   const handleScroll = useCallback(() => {
     if (!gridContainerRef.current) return;
 
@@ -248,7 +242,6 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
             scrollableDiv.scrollTop
         ) < 10;
 
-      // If the user is not at the bottom of the page, disable auto-scroll
       if (!isAtBottom && autoScroll && !userScrolled) {
         setUserScrolled(true);
         setAutoScroll(false);
@@ -256,7 +249,6 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
     }
   }, [autoScroll, userScrolled]);
 
-  // Attach and detach the scroll event listener
   useEffect(() => {
     const scrollableDiv = gridContainerRef.current?.querySelector(
       ".MuiDataGrid-virtualScroller"
@@ -276,13 +268,11 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
       const currentLastRow = logs[logs.length - 1].id;
 
       if (currentLastRow !== lastAddedLogRef.current) {
-        // Assurez-vous que currentLastRow est une chaîne non nulle
         lastAddedLogRef.current = currentLastRow || null;
         setTimeout(scrollToBottom, 100);
       }
     }
 
-    // Auto-size columns when we get the first log
     if (logs.length === 1 && apiRef.current) {
       setTimeout(() => {
         try {
@@ -292,7 +282,7 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
         } catch (e) {
           console.error("Error auto-sizing columns:", e);
         }
-      }, 200); // Small delay to ensure the grid is properly rendered
+      }, 200);
     }
   }, [logs, autoScroll, scrollToBottom]);
 
@@ -356,7 +346,6 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
             try {
               const parsedData = parser.parseLines(data.data);
               for (const log of parsedData) {
-                // Ensure each log has an ID
                 const logWithId: LogEntry = {
                   ...log,
                   id: log.id || crypto.randomUUID(),
@@ -379,12 +368,10 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
         }
       );
 
-      // Gestionnaire pour le contenu initial du fichier (envoyé en bloc)
       const unsubscribeFile = window.electron.onFileOutput(
         (data: FileOutputData) => {
           if (data.id === id && data.lines.length > 0) {
             try {
-              // Traitement par lots pour améliorer les performances
               const newLogs: LogEntry[] = [];
               for (const line of data.lines) {
                 if (!line || line.trim() === "") continue;
@@ -409,7 +396,6 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
                 }
               }
 
-              // Ajout des logs en bloc pour de meilleures performances
               setLogs((prevLogs) => [...prevLogs, ...newLogs]);
             } catch (e) {
               console.error("Error processing file content:", e);
@@ -418,10 +404,7 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
         }
       );
 
-      // Notifier le processus principal que le renderer est prêt à recevoir des données
-      // (seulement pour les fichiers, car les commandes envoient des données au fur et à mesure)
       if (project!.source.type === "file") {
-        // Légère pause pour s'assurer que tous les gestionnaires sont bien configurés
         await window.electron.notifyViewerReady(id);
       }
 
@@ -461,23 +444,22 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
 
     const levelLower = level.toLowerCase();
 
-    // To maintain consistency with the borders, we use custom colors
     switch (levelLower) {
       case "fatal":
       case "severe":
       case "error":
-        return "error"; // Uses Material UI error color
+        return "error";
       case "warn":
       case "warning":
-        return "warning"; // Uses Material UI warning color
+        return "warning";
       case "info":
-        return "info"; // Material UI's info color is similar to what we use
+        return "info";
       case "debug":
-        return "secondary"; // For the purple color
+        return "secondary";
       case "trace":
-        return "success"; // For the green/teal color, success is the closest match
+        return "success";
       default:
-        return "default"; // Neutral gray for undefined cases
+        return "default";
     }
   };
 
@@ -487,11 +469,10 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
       let chipColor = getLevelColor(levelLower);
       let customColor: string | null = null;
 
-      // For specific types that require custom colors
       if (levelLower === "debug") {
-        customColor = mode === "dark" ? "#8e24aa" : "#7b1fa2"; // Purple
+        customColor = mode === "dark" ? "#8e24aa" : "#7b1fa2";
       } else if (levelLower === "trace") {
-        customColor = mode === "dark" ? "#00897b" : "#00796b"; // Green/Teal
+        customColor = mode === "dark" ? "#00897b" : "#00796b";
       }
 
       return (
@@ -552,13 +533,11 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
   };
 
   const filteredLogs = useMemo(() => {
-    // If no filters are active, return all logs
     if (filterModel.items.length === 0 && levelFilter === "all") {
       return logs;
     }
 
     return logs.filter((log) => {
-      // Apply level filter
       if (
         levelFilter !== "all" &&
         log.level &&
@@ -567,20 +546,16 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
         return false;
       }
 
-      // If there are no filters, or if the log matches only the levelFilter, return true
       if (filterModel.items.length === 0) {
         return true;
       }
 
-      // Apply column filters according to the logicOperator
       const logicOperator = filterModel.logicOperator || "or";
 
       if (logicOperator === "or") {
-        // If the operator is OR, at least one filter must match
         return filterModel.items.some((filterItem) => {
           const { field, operator, value } = filterItem;
 
-          // If the log doesn't have this field or the value is undefined, this filter doesn't match
           if (log[field] === undefined) {
             return false;
           }
@@ -602,15 +577,13 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
             case "isNotEmpty":
               return logValue !== "";
             default:
-              return true; // Unknown operator - pass
+              return true;
           }
         });
       } else {
-        // If the operator is AND, all filters must match
         return filterModel.items.every((filterItem) => {
           const { field, operator, value } = filterItem;
 
-          // If the log doesn't have this field or the value is undefined, this filter doesn't match
           if (log[field] === undefined) {
             return false;
           }
@@ -632,7 +605,7 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
             case "isNotEmpty":
               return logValue !== "";
             default:
-              return true; // Unknown operator - pass
+              return true;
           }
         });
       }
@@ -706,7 +679,7 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
                   return "trace-row";
                 }
               }
-              return "default-row"; // Default highlight for logs without a level
+              return "default-row";
             }}
             sx={{
               height: "100%",

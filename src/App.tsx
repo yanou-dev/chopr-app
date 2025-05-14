@@ -13,8 +13,6 @@ import HomePage from "./pages/HomePage";
 import CreateProjectPage from "./pages/CreateProjectPage";
 import ViewerPage from "./pages/ViewerPage";
 
-// Types sont définis dans react-app-env.d.ts
-
 const WindowResizer: React.FC = () => {
   const location = useLocation();
 

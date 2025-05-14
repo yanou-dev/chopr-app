@@ -76,19 +76,16 @@ class JSONParser extends BaseParser {
         const data = JSON.parse(line);
         this.updateColumns(data);
 
-        // Ensure each log entry has an ID
         if (!data.id) {
           data.id = `json-${Date.now()}-${Math.random()
             .toString(36)
             .substr(2, 9)}`;
         }
 
-        // Add the raw log for reference
         data.raw = line;
 
         logsArray.push(data);
       } catch (e) {
-        // Add error entry for unparseable lines
         logsArray.push({
           id: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           raw: line,

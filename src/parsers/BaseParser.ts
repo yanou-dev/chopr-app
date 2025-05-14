@@ -109,7 +109,7 @@ export interface LogEntry {
   rawLog?: string;
   error?: boolean;
   raw?: string;
-  [key: string]: any; // Allow for additional dynamic fields
+  [key: string]: any;
 }
 
 export default BaseParser;

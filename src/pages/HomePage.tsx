@@ -25,8 +25,6 @@ import TitleBar from "../components/TitleBar";
 import { useTranslation } from "../i18n/i18n";
 import LogFormats from "../parsers/LogFormats";
 
-// Les types Project et ProjectResponse sont définis globalement dans react-app-env.d.ts
-
 interface HomePageProps {
   setCurrentProject: React.Dispatch<React.SetStateAction<Project | null>>;
 }

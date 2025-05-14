@@ -13,10 +13,9 @@ import {
 } from "@mui/material/styles";
 import useMediaQuery from "@mui/material/useMediaQuery";
 
-// Types
 interface ThemeContextType {
   theme: Theme;
-  mode: 'light' | 'dark';
+  mode: "light" | "dark";
 }
 
 interface ThemeProviderProps {
@@ -27,7 +26,9 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
-  const [mode, setMode] = useState<'light' | 'dark'>(prefersDarkMode ? "dark" : "light");
+  const [mode, setMode] = useState<"light" | "dark">(
+    prefersDarkMode ? "dark" : "light"
+  );
 
   useEffect(() => {
     setMode(prefersDarkMode ? "dark" : "light");
