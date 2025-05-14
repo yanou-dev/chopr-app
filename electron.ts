@@ -90,7 +90,30 @@ function createWindow(): void {
   mainWindow.loadURL(startUrl);
 
   mainWindow.once("ready-to-show", () => {
-    mainWindow?.show();
+    const initialRoute = "/"; // Route par défaut
+    let width = 800;
+    let height = 600;
+
+    switch (initialRoute) {
+      case "/":
+        width = 700;
+        height = 500;
+        break;
+      case "/create" as string:
+        width = 550;
+        height = 650;
+        break;
+      case "/viewer" as string:
+        width = 1200;
+        height = 800;
+        break;
+    }
+
+    if (mainWindow) {
+      mainWindow.setSize(width, height);
+      mainWindow.center();
+      mainWindow.show();
+    }
   });
 
   mainWindow.on("closed", () => {
