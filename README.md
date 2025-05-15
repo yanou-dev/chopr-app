@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-MacOS%20%7C%20Windows%20%7C%20Linux-blue" alt="Platform" />
   <img src="https://img.shields.io/badge/license-GPLv3-blue" alt="License" />
-  <img src="https://img.shields.io/badge/Electron-25.3.0-brightgreen" alt="Electron" />
+  <img src="https://img.shields.io/badge/Electron-36.2.0-brightgreen" alt="Electron" />
   <img src="https://img.shields.io/badge/React-18.2.0-blue" alt="React" />
 </p>
 
