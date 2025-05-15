@@ -319,9 +319,6 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
       }
 
       const newLogs = [...prevLogs, logEntry];
-      if (newLogs.length > 10000) {
-        return newLogs.slice(newLogs.length - 10000);
-      }
       return newLogs;
     });
   };
