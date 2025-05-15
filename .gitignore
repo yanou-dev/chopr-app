@@ -32,3 +32,5 @@ fake_logs.txt
 .vscode
 
 .env
+public/electron.js
+public/preload.js

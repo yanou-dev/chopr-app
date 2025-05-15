@@ -9,7 +9,7 @@
     "dev:electron": "tsc -p electron.tsconfig.json && electron .",
     "dev:react": "cross-env BROWSER=none react-app-rewired start",
     "electron:build": "cross-env NODE_ENV=production npm run build && electron-builder -mwl",
-    "build": "react-app-rewired build && tsc -p electron.tsconfig.json",
+    "build": "tsc -p electron.tsconfig.json && react-app-rewired build",
     "check-types": "tsc --noEmit",
     "test": "react-app-rewired test",
     "postinstall": "patch-package"
@@ -38,8 +38,7 @@
     "productName": "Chopr",
     "copyright": "Copyright © 2025 yanou.dev()",
     "files": [
-      "build/**/*",
-      "!node_modules"
+      "build/**/*"
     ],
     "directories": {
       "output": "dist"
@@ -138,6 +137,9 @@
   "author": "yanou.dev() <yanis.kerriou@gmail.com> (https://yanou.dev)",
   "license": "MIT",
   "dependencies": {
+    "shell-path": "^3.0.0"
+  },
+  "devDependencies": {
     "@emotion/react": "^11.11.0",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^7.0.2",
@@ -145,13 +147,10 @@
     "@mui/x-data-grid": "^8.1.0",
     "@mui/x-data-grid-pro": "^8.1.0",
     "dotenv": "^16.5.0",
-    "jszip": "^3.10.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.14.1",
-    "react-scripts": "5.0.1"
-  },
-  "devDependencies": {
+    "react-scripts": "5.0.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@types/node": "^22.15.17",
     "@types/react": "^19.1.4",

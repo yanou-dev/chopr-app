@@ -9,6 +9,8 @@ import {
 import * as path from "path";
 import * as fs from "fs";
 import { spawn, ChildProcess } from "child_process";
+// @ts-ignore
+import { shellPath } from "shell-path";
 
 const isDev = process.env.NODE_ENV === "development";
 
@@ -472,6 +474,10 @@ const startCommand = async (
       childProcess = spawn(cmd, args, {
         shell: true,
         detached: false,
+        env: {
+          ...process.env,
+          PATH: `${await shellPath()}:${process.env.PATH || ""}`,
+        },
       });
     }
 
