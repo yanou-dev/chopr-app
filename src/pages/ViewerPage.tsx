@@ -581,21 +581,29 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
           }
 
           const logValue = String(log[field]).toLowerCase();
-          const filterValue = (value as string)?.toLowerCase() || "";
 
           switch (operator) {
             case "contains":
-              return logValue.includes(filterValue);
+              return logValue.includes(value.toLowerCase() || "");
+            case "doesNotContain":
+              return !logValue.includes(value.toLowerCase() || "");
             case "equals":
-              return logValue === filterValue;
+              return logValue === value.toLowerCase() || "";
+            case "doesNotEqual":
+              return logValue !== value.toLowerCase() || "";
             case "startsWith":
-              return logValue.startsWith(filterValue);
+              return logValue.startsWith(value.toLowerCase() || "");
             case "endsWith":
-              return logValue.endsWith(filterValue);
+              return logValue.endsWith(value.toLowerCase() || "");
             case "isEmpty":
               return logValue === "";
             case "isNotEmpty":
               return logValue !== "";
+            case "isAnyOf":
+              return (
+                Array.isArray(value) &&
+                value.some((val) => String(val).toLowerCase() === logValue)
+              );
             default:
               return true;
           }
@@ -609,21 +617,29 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
           }
 
           const logValue = String(log[field]).toLowerCase();
-          const filterValue = (value as string)?.toLowerCase() || "";
 
           switch (operator) {
             case "contains":
-              return logValue.includes(filterValue);
+              return logValue.includes(value.toLowerCase() || "");
+            case "doesNotContain":
+              return !logValue.includes(value.toLowerCase() || "");
             case "equals":
-              return logValue === filterValue;
+              return logValue === value.toLowerCase() || "";
+            case "doesNotEqual":
+              return logValue !== value.toLowerCase() || "";
             case "startsWith":
-              return logValue.startsWith(filterValue);
+              return logValue.startsWith(value.toLowerCase() || "");
             case "endsWith":
-              return logValue.endsWith(filterValue);
+              return logValue.endsWith(value.toLowerCase() || "");
             case "isEmpty":
               return logValue === "";
             case "isNotEmpty":
               return logValue !== "";
+            case "isAnyOf":
+              return (
+                Array.isArray(value) &&
+                value.some((val) => String(val).toLowerCase() === logValue)
+              );
             default:
               return true;
           }
