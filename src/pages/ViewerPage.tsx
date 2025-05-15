@@ -193,6 +193,7 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
   const lastAddedLogRef = useRef<string | null>(null);
   const apiRef = useRef<GridApiPro | null>(null);
+  const commandBufferRef = useRef<string>("");
 
   useEffect(() => {
     parser.on("columnsChanged", (newColumns: ParserColumn[]) => {
@@ -327,6 +328,7 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
 
   const startLogCollection = async (): Promise<(() => void) | void> => {
     setLoading(true);
+    commandBufferRef.current = "";
 
     try {
       const id = `${project!.source.type}-${Date.now()}`;
@@ -341,19 +343,47 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
       const unsubscribeCommand = window.electron.onCommandOutput(
         (data: CommandOutputData) => {
           if (data.id === id) {
-            if (!data.data || data.data.trim() === "") return;
+            if (!data.data) return;
 
             try {
-              const parsedData = parser.parseLines(data.data);
-              for (const log of parsedData) {
-                const logWithId: LogEntry = {
-                  ...log,
-                  id: log.id || crypto.randomUUID(),
-                };
-                addLogEntry(logWithId);
+              commandBufferRef.current += data.data;
+
+              let newlineIndex = commandBufferRef.current.indexOf("\n");
+
+              if (newlineIndex !== -1) {
+                const lines: string[] = [];
+                let startIndex = 0;
+
+                while (newlineIndex !== -1) {
+                  const line = commandBufferRef.current
+                    .substring(startIndex, newlineIndex)
+                    .trim();
+                  if (line) lines.push(line);
+
+                  startIndex = newlineIndex + 1;
+                  newlineIndex = commandBufferRef.current.indexOf(
+                    "\n",
+                    startIndex
+                  );
+                }
+
+                commandBufferRef.current =
+                  commandBufferRef.current.substring(startIndex);
+
+                if (lines.length > 0) {
+                  console.log(`Parsing ${lines.length} complete lines`);
+                  const parsedData = parser.parseLines(lines.join("\n"));
+                  for (const log of parsedData) {
+                    const logWithId: LogEntry = {
+                      ...log,
+                      id: log.id || crypto.randomUUID(),
+                    };
+                    addLogEntry(logWithId);
+                  }
+                }
               }
             } catch (e) {
-              console.error(e);
+              console.error("Error processing command output:", e);
               const logEntry: LogEntry = {
                 id: crypto.randomUUID(),
                 level: "info",
