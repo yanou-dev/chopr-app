@@ -47,7 +47,7 @@ class LogParser extends BaseParser {
   }
 
   parseLines(lines: string): LogEntry[] {
-    const linesArray = lines.split("\n").filter((line) => line !== "");
+    const linesArray = lines.split(/\r\n|\n/).filter((line) => line !== "");
     let logsArray: LogEntry[] = [];
     for (const line of linesArray) {
       try {
@@ -57,7 +57,7 @@ class LogParser extends BaseParser {
           .trim();
 
         const patterns = RegexPatterns[this.type];
-        
+
         if (!patterns) {
           throw new Error(`Pas de patterns définis pour le type: ${this.type}`);
         }

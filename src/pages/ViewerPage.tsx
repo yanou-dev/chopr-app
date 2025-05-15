@@ -348,27 +348,18 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
             try {
               commandBufferRef.current += data.data;
 
-              let newlineIndex = commandBufferRef.current.indexOf("\n");
+              const splitRegex = /\r\n|\n/;
+              let lines: string[] = [];
+              let remainingBuffer = commandBufferRef.current;
 
-              if (newlineIndex !== -1) {
-                const lines: string[] = [];
-                let startIndex = 0;
+              const parts = commandBufferRef.current.split(splitRegex);
 
-                while (newlineIndex !== -1) {
-                  const line = commandBufferRef.current
-                    .substring(startIndex, newlineIndex)
-                    .trim();
-                  if (line) lines.push(line);
+              if (parts.length > 1) {
+                lines = parts.slice(0, -1).filter((line) => line.trim() !== "");
 
-                  startIndex = newlineIndex + 1;
-                  newlineIndex = commandBufferRef.current.indexOf(
-                    "\n",
-                    startIndex
-                  );
-                }
+                remainingBuffer = parts[parts.length - 1];
 
-                commandBufferRef.current =
-                  commandBufferRef.current.substring(startIndex);
+                commandBufferRef.current = remainingBuffer;
 
                 if (lines.length > 0) {
                   console.log(`Parsing ${lines.length} complete lines`);

@@ -66,7 +66,7 @@ class JSONParser extends BaseParser {
    * @returns Array of parsed log entries
    */
   parseLines(lines: string): LogEntry[] {
-    const linesArray = lines.split("\n");
+    const linesArray = lines.split(/\r\n|\n/);
     let logsArray: LogEntry[] = [];
 
     for (const line of linesArray) {
