@@ -30,3 +30,5 @@ yarn-error.log*
 fake_logs.txt
 
 .vscode
+
+.env

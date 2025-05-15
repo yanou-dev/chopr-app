@@ -44,6 +44,7 @@
     "directories": {
       "output": "dist"
     },
+    "afterSign": "notarize.js",
     "mac": {
       "icon": "public/AppIcon.icns",
       "target": [
@@ -61,7 +62,10 @@
       "electronLanguages": [
         "en",
         "fr"
-      ]
+      ],
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist"
     },
     "win": {
       "icon": "public/AppIcon.ico",
@@ -140,6 +144,7 @@
     "@mui/material": "^7.0.2",
     "@mui/x-data-grid": "^8.1.0",
     "@mui/x-data-grid-pro": "^8.1.0",
+    "dotenv": "^16.5.0",
     "jszip": "^3.10.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -156,6 +161,7 @@
     "customize-cra": "^1.0.0",
     "electron": "^36.2.0",
     "electron-builder": "^26.0.12",
+    "electron-notarize": "^1.2.2",
     "jest": "^27.5.1",
     "patch-package": "^8.0.0",
     "postinstall-postinstall": "^2.1.0",
