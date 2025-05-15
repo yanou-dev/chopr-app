@@ -450,19 +450,15 @@ const startCommand = async (
   command: string
 ): Promise<ProjectResponse> => {
   try {
-    console.log(`Starting command with ID ${id}: ${command}`);
     if (activeCommands.has(id)) {
       const { process } = activeCommands.get(id)!;
       process.kill();
       activeCommands.delete(id);
-      console.log(`Killed existing command with ID ${id}`);
     }
 
     let childProcess;
 
     if (process.platform === "win32") {
-      console.log(`Using PowerShell to execute command on Windows`);
-
       childProcess = spawn("powershell.exe", ["-Command", command], {
         detached: false,
       });
@@ -488,11 +484,6 @@ const startCommand = async (
           data: data.toString(),
           type: "stdout",
         });
-        console.log(
-          `Command ${id} stdout: ${data.toString().substring(0, 100)}${
-            data.toString().length > 100 ? "..." : ""
-          }`
-        );
       }
     });
 
@@ -601,13 +592,9 @@ ipcMain.handle(
   "watch-file",
   async (event: IpcMainInvokeEvent, { id, filePath }: WatchFileParams) => {
     try {
-      console.log(`Attempting to watch file: ${filePath}`);
-
       if (fs.existsSync(filePath)) {
-        console.log(`File exists, reading content: ${filePath}`);
         const fileContent = fs.readFileSync(filePath, "utf-8");
         const lines = fileContent.split(/\r?\n/);
-        console.log(`File read successfully, ${lines.length} lines found`);
 
         const initialFileContent = {
           id,
@@ -617,7 +604,6 @@ ipcMain.handle(
         const sendInitialContent = () => {
           if (mainWindow) {
             mainWindow.webContents.send("file-output", initialFileContent);
-            console.log(`Sent file content to renderer`);
           }
         };
 
@@ -630,8 +616,6 @@ ipcMain.handle(
       } else {
         console.log(`File does not exist: ${filePath}`);
       }
-
-      console.log(`Using fs.watch for file watching on all platforms`);
 
       let currentSize = fs.existsSync(filePath)
         ? fs.statSync(filePath).size
@@ -670,7 +654,6 @@ ipcMain.handle(
       });
 
       const cleanupWatcher = () => {
-        console.log(`Cleaning up watcher for ${filePath}`);
         watcher.close();
       };
 

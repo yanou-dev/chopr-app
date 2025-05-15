@@ -362,7 +362,6 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
                 commandBufferRef.current = remainingBuffer;
 
                 if (lines.length > 0) {
-                  console.log(`Parsing ${lines.length} complete lines`);
                   const parsedData = parser.parseLines(lines.join("\n"));
                   for (const log of parsedData) {
                     const logWithId: LogEntry = {
