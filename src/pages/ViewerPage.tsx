@@ -29,6 +29,8 @@ import {
   GridRowClassNameParams,
   GridDensity,
   GridColumnVisibilityModel,
+  useGridApiRef,
+  gridFilteredRowCountSelector,
 } from "@mui/x-data-grid-pro";
 import { frFR } from "@mui/x-data-grid-pro/locales";
 import VerticalAlignBottomIcon from "@mui/icons-material/VerticalAlignBottom";
@@ -94,6 +96,11 @@ interface ViewerPageProps {
   project: Project | null;
 }
 
+type RowCount = {
+  filteredRowCount: number;
+  totalRowCount: number;
+};
+
 function CustomToolbar(props: CustomToolbarProps) {
   const {
     handleClearLogs,
@@ -101,20 +108,11 @@ function CustomToolbar(props: CustomToolbarProps) {
     setAutoScroll,
     scrollToBottom,
     setUserScrolled,
-    densityLevel,
     setDensityLevel,
     apiRef,
   } = props;
 
   const { t } = useTranslation();
-
-  const handleDensityChange = (newDensity: GridDensity) => {
-    setDensityLevel(newDensity);
-
-    if (apiRef.current) {
-      apiRef.current.setDensity(newDensity);
-    }
-  };
 
   return (
     <GridToolbarContainer
@@ -182,17 +180,17 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [clearConfirmOpen, setClearConfirmOpen] = useState<boolean>(false);
-  const [pinnedColumns, setPinnedColumns] = useState<Record<string, any>>({});
   const [fontSize, setFontSize] = useState<number>(12);
   const [densityLevel, setDensityLevel] = useState<GridDensity>("compact");
   const [filterModel, setFilterModel] = useState<GridFilterModel>({
     items: [],
   });
   const [userScrolled, setUserScrolled] = useState<boolean>(false);
+  const [filteredRowCount, setFilteredRowCount] = useState<number>(0);
 
   const gridContainerRef = useRef<HTMLDivElement | null>(null);
   const lastAddedLogRef = useRef<string | null>(null);
-  const apiRef = useRef<GridApiPro | null>(null);
+  const apiRef = useGridApiRef();
   const commandBufferRef = useRef<string>("");
 
   useEffect(() => {
@@ -549,113 +547,15 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
     );
   };
 
-  const filteredLogs = useMemo(() => {
-    if (filterModel.items.length === 0 && levelFilter === "all") {
-      return logs;
-    }
-
-    return logs.filter((log) => {
-      if (
-        levelFilter !== "all" &&
-        log.level &&
-        log.level.toLowerCase() !== levelFilter.toLowerCase()
-      ) {
-        return false;
-      }
-
-      if (filterModel.items.length === 0) {
-        return true;
-      }
-
-      const logicOperator = filterModel.logicOperator || "or";
-
-      if (logicOperator === "or") {
-        return filterModel.items.some((filterItem) => {
-          const { field, operator, value } = filterItem;
-
-          if (log[field] === undefined) {
-            return false;
-          }
-
-          const logValue = String(log[field]).toLowerCase();
-          const filterValue = typeof value === "string" ? value.toLowerCase() : value;
-
-          switch (operator) {
-            case "contains":
-              return logValue.includes(filterValue || "");
-            case "doesNotContain":
-              return !logValue.includes(filterValue || "");
-            case "equals":
-              return logValue === filterValue || "";
-            case "doesNotEqual":
-              return logValue !== filterValue || "";
-            case "startsWith":
-              return logValue.startsWith(filterValue || "");
-            case "endsWith":
-              return logValue.endsWith(filterValue || "");
-            case "isEmpty":
-              return logValue === "";
-            case "isNotEmpty":
-              return logValue !== "";
-            case "isAnyOf":
-              return (
-                Array.isArray(value) &&
-                value.some((val) => String(val).toLowerCase() === logValue)
-              );
-            default:
-              return true;
-          }
-        });
-      } else {
-        return filterModel.items.every((filterItem) => {
-          const { field, operator, value } = filterItem;
-
-          if (log[field] === undefined) {
-            return false;
-          }
-
-          const logValue = String(log[field]).toLowerCase();
-          const filterValue = typeof value === "string" ? value.toLowerCase() : value;
-
-          switch (operator) {
-            case "contains":
-              return logValue.includes(filterValue || "");
-            case "doesNotContain":
-              return !logValue.includes(filterValue || "");
-            case "equals":
-              return logValue === filterValue || "";
-            case "doesNotEqual":
-              return logValue !== filterValue || "";
-            case "startsWith":
-              return logValue.startsWith(filterValue || "");
-            case "endsWith":
-              return logValue.endsWith(filterValue || "");
-            case "isEmpty":
-              return logValue === "";
-            case "isNotEmpty":
-              return logValue !== "";
-            case "isAnyOf":
-              return (
-                Array.isArray(value) &&
-                value.some((val) => String(val).toLowerCase() === logValue)
-              );
-            default:
-              return true;
-          }
-        });
-      }
-    });
-  }, [logs, filterModel, levelFilter]);
-
   const getDataGridRows = () => {
-    return filteredLogs.map((log, index) => ({
+    return logs.map((log, index) => ({
       ...log,
       id: log.id || index.toString(),
     }));
   };
 
-  const handleFilterModelChange = (newFilterModel: GridFilterModel) => {
-    setFilterModel(newFilterModel);
+  const handleRowCountChange = () => {
+    setFilteredRowCount(gridFilteredRowCountSelector(apiRef));
   };
 
   return (
@@ -683,9 +583,8 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
             disableRowSelectionOnClick
             loading={loading}
             apiRef={apiRef}
-            filterMode="server"
-            onFilterModelChange={handleFilterModelChange}
-            filterModel={filterModel}
+            filterMode="client"
+            onRowCountChange={handleRowCountChange}
             localeText={
               language === "fr"
                 ? frFR.components.MuiDataGrid.defaultProps.localeText
@@ -856,7 +755,7 @@ const ViewerPage: React.FC<ViewerPageProps> = ({ project }) => {
       >
         <Typography variant="caption" color="text.secondary">
           {t("logsDisplayed", {
-            filtered: filteredLogs.length,
+            filtered: filteredRowCount,
             total: logs.length,
           })}
         </Typography>
