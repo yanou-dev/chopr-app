@@ -151,6 +151,8 @@ function createWindow(): void {
   }
 }
 
+app.commandLine.appendSwitch("gtk-version", "3");
+
 app.whenReady().then(createWindow);
 
 app.on("window-all-closed", () => {
